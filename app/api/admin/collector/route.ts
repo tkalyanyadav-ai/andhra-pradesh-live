@@ -18,13 +18,13 @@ export async function POST(req:Request){
  const body=await req.json().catch(()=>null) as {id?:string;action?:string}|null;
  if(!body?.id||!["approve","reject"].includes(body.action??""))return jsonError("Provide an item id and approve/reject action");
  const db=await getDatabase();if(!db)return jsonError("Database unavailable",503);
- const item=await db.prepare("SELECT id,title,summary,category,source_url,published_at FROM collector_queue WHERE id=? AND status='PENDING'").bind(body.id).first<Record<string,unknown>>();
+ const item=await db.prepare("SELECT id,source_id,title,summary,category,source_url,published_at,detected_at FROM collector_queue WHERE id=? AND status='PENDING'").bind(body.id).first<Record<string,unknown>>();
  if(!item)return jsonError("Pending item not found",404);
  try{
   if(body.action==="approve"){
    const title=String(item.title);const slug=title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,90)+"-"+makeId().slice(0,8);
-   await db.prepare("INSERT INTO articles(id,slug,title,summary,category,source_url,published_at,verification_status,is_demo) VALUES(?,?,?,?,?,?,?,'CONFIRMED',0)")
-    .bind(makeId(),slug,title,String(item.summary),String(item.category),String(item.source_url),typeof item.published_at==="string"?item.published_at:new Date().toISOString()).run();
+   await db.prepare("INSERT INTO articles(id,slug,title,summary,category,source_id,source_url,published_at,checked_at,verification_status,is_demo) VALUES(?,?,?,?,?,?,?,?,?,'CONFIRMED',0)")
+    .bind(makeId(),slug,title,String(item.summary),String(item.category),String(item.source_id),String(item.source_url),typeof item.published_at==="string"?item.published_at:String(item.detected_at),String(item.detected_at)).run();
   }
   await db.prepare("UPDATE collector_queue SET status=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDING'").bind(body.action==="approve"?"APPROVED":"REJECTED",body.id).run();
   await db.prepare("INSERT INTO audit_log(id,actor,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(makeId(),"admin-token",body.action!.toUpperCase(),"collector_queue",body.id).run();
