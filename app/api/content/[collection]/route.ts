@@ -1,7 +1,7 @@
 import {getDatabase} from "@/lib/cloudflare-db";
 export const dynamic="force-dynamic";
 const sql:Record<string,string>={
- news:"SELECT id,slug,title,title_te,summary,summary_te,category,source_url,published_at,verification_status,district_id FROM articles WHERE is_demo=0 ORDER BY published_at DESC LIMIT ?",
+ news:"SELECT a.id,a.slug,a.title,a.title_te,a.summary,a.summary_te,a.category,a.source_url,a.published_at,a.verification_status,a.district_id,d.name AS district,s.name AS source_name FROM articles a LEFT JOIN districts d ON d.id=a.district_id LEFT JOIN sources s ON s.id=a.source_id WHERE a.is_demo=0 ORDER BY a.published_at DESC LIMIT ?",
  "government-orders":"SELECT id,go_number,category,subject,summary,issue_date,pdf_url,source_url,verified FROM government_orders WHERE is_demo=0 ORDER BY issue_date DESC LIMIT ?",
  districts:"SELECT id,name,name_te,slug,official_url FROM districts WHERE active=1 ORDER BY name LIMIT ?",
  departments:"SELECT id,name,name_te,slug,official_url FROM departments ORDER BY name LIMIT ?",
