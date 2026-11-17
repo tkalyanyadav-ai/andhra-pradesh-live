@@ -12,7 +12,7 @@ function cleanHtml(html:string) {
  return html.replace(/<(script|style|noscript|svg)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6])\b[^>]*>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/[\t\r ]+/g," ").replace(/\n\s*/g,"\n").trim().slice(0,18000);
 }
 const districtIds=["ap-district-asr","ap-district-anakapalli","ap-district-anantapuramu","ap-district-annamayya","ap-district-bapatla","ap-district-chittoor","ap-district-konaseema","ap-district-east-godavari","ap-district-eluru","ap-district-guntur","ap-district-kakinada","ap-district-krishna","ap-district-kurnool","ap-district-nandyal","ap-district-ntr","ap-district-palnadu","ap-district-parvathipuram-manyam","ap-district-prakasam","ap-district-spsr-nellore","ap-district-sri-sathya-sai","ap-district-srikakulam","ap-district-tirupati","ap-district-visakhapatnam","ap-district-vizianagaram","ap-district-west-godavari","ap-district-ysr-kadapa","ap-district-markapuram","ap-district-polavaram"];
-function districtForSource(sourceId:string){const m=sourceId.match(/^src-rss-district-(\\d{2})$/);return m?districtIds[Number(m[1])-1]??null:null;}
+function districtForSource(sourceId:string){const m=sourceId.match(/^src-rss-district-(\d{2})$/);return m?districtIds[Number(m[1])-1]??null:null;}
 function parseDate(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
 function classifyNews(value:string){
  const s=value.toLowerCase();
