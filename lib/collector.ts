@@ -90,7 +90,7 @@ export async function collectOfficialSources(env:Env) {
     await env.DB.prepare("UPDATE collector_source_state SET last_checked_at=CURRENT_TIMESTAMP,last_error=NULL WHERE source_id=?").bind(source.id).run();
     await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;return;
    }
-   if(source.source_type!=="NEWS")items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);
+   if(source.source_type!=="NEWS")items=await summarize(env.GEMINI_API_KEY!,source,text,allowedUrls);
    for(const item of items){
     const articleUrl=allowedUrls.has(item.sourceUrl||"")?item.sourceUrl!:source.url;
     const fp=await fingerprint(articleUrl+"|"+item.title);
