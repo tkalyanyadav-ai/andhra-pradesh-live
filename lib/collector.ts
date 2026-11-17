@@ -11,6 +11,8 @@ const schema = {type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJEC
 function cleanHtml(html:string) {
  return html.replace(/<(script|style|noscript|svg)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6])\b[^>]*>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/[\t\r ]+/g," ").replace(/\n\s*/g,"\n").trim().slice(0,18000);
 }
+const districtIds=["ap-district-asr","ap-district-anakapalli","ap-district-anantapuramu","ap-district-annamayya","ap-district-bapatla","ap-district-chittoor","ap-district-konaseema","ap-district-east-godavari","ap-district-eluru","ap-district-guntur","ap-district-kakinada","ap-district-krishna","ap-district-kurnool","ap-district-nandyal","ap-district-ntr","ap-district-palnadu","ap-district-parvathipuram-manyam","ap-district-prakasam","ap-district-spsr-nellore","ap-district-sri-sathya-sai","ap-district-srikakulam","ap-district-tirupati","ap-district-visakhapatnam","ap-district-vizianagaram","ap-district-west-godavari","ap-district-ysr-kadapa","ap-district-markapuram","ap-district-polavaram"];
+function districtForSource(sourceId:string){const m=sourceId.match(/^src-rss-district-(\\d{2})$/);return m?districtIds[Number(m[1])-1]??null:null;}
 function parseDate(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
 function classifyNews(value:string){
  const s=value.toLowerCase();
@@ -78,7 +80,7 @@ export async function collectOfficialSources(env:Env) {
     const articleUrl=allowedUrls.has(item.sourceUrl||"")?item.sourceUrl!:source.url;
     const fp=await fingerprint(articleUrl+"|"+item.title);
     const date=/^\d{4}-\d{2}-\d{2}$/.test(item.publishedAt)?item.publishedAt:null;
-    const result=await env.DB.prepare("INSERT OR IGNORE INTO collector_queue(id,fingerprint,source_id,title,summary,category,source_url,published_at) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),fp,source.id,item.title.trim().slice(0,240),item.summary.trim().slice(0,1200),item.category,articleUrl,date).run() as {meta?:{changes?:number}};
+    const result=await env.DB.prepare("INSERT OR IGNORE INTO collector_queue(id,fingerprint,source_id,title,summary,category,source_url,published_at,district_id) VALUES(?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),fp,source.id,item.title.trim().slice(0,240),item.summary.trim().slice(0,1200),item.category,articleUrl,date,districtForSource(source.id)).run() as {meta?:{changes?:number}};
     if(result.meta?.changes)report.queued++;else report.skipped++;
    }
    await env.DB.prepare("INSERT INTO collector_source_state(source_id,content_hash,last_checked_at,last_error) VALUES(?,?,CURRENT_TIMESTAMP,NULL) ON CONFLICT(source_id) DO UPDATE SET content_hash=excluded.content_hash,last_checked_at=CURRENT_TIMESTAMP,last_error=NULL").bind(source.id,contentHash).run();
