@@ -38,7 +38,7 @@ function rssEntries(xml:string){
   const get=(tag:string)=>decodeXml(block.match(new RegExp("<"+tag+"\\b[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))?.[1]??"");
   const linkTag=block.match(/<link\b([^>]*)\/?>/i);
   const atomHref=linkTag?.[1].match(/\bhref=["']([^"']+)["']/i)?.[1];
-  const link=atomHref??get("link");
+  const link=decodeXml(atomHref??get("link"));
   return {
    title:get("title"),
    link:link.trim(),
