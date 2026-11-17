@@ -2,7 +2,7 @@ import {getDatabase,jsonError,makeId} from "@/lib/cloudflare-db";
 export const dynamic="force-dynamic";
 function authorized(req:Request){
  const expected=process.env.ADMIN_API_TOKEN??"";
- const got=req.headers.get("authorization")?.replace(/^Bearer\\s+/i,"")??"";
+ const got=req.headers.get("authorization")?.replace(/^Bearer\s+/i,"")??"";
  if(!expected||got.length!==expected.length)return false;
  let diff=0;for(let i=0;i<expected.length;i++)diff|=expected.charCodeAt(i)^got.charCodeAt(i);
  return diff===0;

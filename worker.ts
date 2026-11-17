@@ -1,8 +1,8 @@
-// OpenNext generates the fetch handler during the build. This wrapper adds Cloudflare Cron support.
+// @ts-ignore OpenNext creates this module during the Cloudflare build.
 import openNextWorker from "./.open-next/worker.js";
 import { collectOfficialSources } from "./lib/collector";
 
-type Env = { DB: { prepare(sql:string): { bind(...values:unknown[]): { all<T=Record<string,unknown>>():Promise<{results:T[]}>; run():Promise<unknown> } } }; GEMINI_API_KEY?: string };
+type Env = { DB: any; GEMINI_API_KEY?: string };
 
 export default {
   fetch: openNextWorker.fetch,
