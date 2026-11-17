@@ -21,7 +21,7 @@ Next.js 15 App Router, React 19, TypeScript, OpenNext Cloudflare adapter, Cloudf
 
 ## Cloudflare deployment
 1. Create a D1 database named `andhra-pradesh-live-db`.
-2. Replace `REPLACE_WITH_D1_DATABASE_ID` in `wrangler.jsonc` with the D1 database ID.
+2. Replace `00000000000000000000000000000000 (replace this placeholder with your D1 database ID)` in `wrangler.jsonc` with the D1 database ID.
 3. Apply schema using `npm run db:migrate:remote`.
 4. Add Worker secret `ADMIN_API_TOKEN` in Cloudflare. Never commit secrets.
 5. Run `npm run preview`, then `npm run deploy`.
