@@ -38,7 +38,7 @@ The Worker is named `andhra-pradesh-live`. The D1 binding is `DB`.
 Admin collections: news, government-orders, districts, departments, officers, amaravati, schemes, recruitment. Send `Authorization: Bearer <ADMIN_API_TOKEN>`. New news records default to `AWAITING_OFFICIAL_CONFIRMATION`; admin writes are audited.
 
 ## GitHub Actions
-The deployment workflow uses `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. Configure both before enabling automated deployment from main. Cloudflare token should be scoped to Workers deployment and D1 access required by your workflow.
+The deployment workflow uses `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. It provisions the D1 database automatically. The Cloudflare API token needs permission to manage Workers Scripts and D1 databases.
 
 ## Source integrity
 Official source starting points: https://www.ap.gov.in/ ; https://goir.ap.gov.in/ ; https://crda.ap.gov.in/ ; https://www.india.gov.in/ .
