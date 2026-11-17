@@ -2,7 +2,7 @@ type Statement = { bind(...values: unknown[]): Statement; all<T=Record<string,un
 type Database = { prepare(sql:string): Statement };
 type Source = { id:string; name:string; url:string; content_hash?:string|null };
 type Env = { DB: Database; GEMINI_API_KEY?: string };
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3.5-flash-lite";
 const schema = {
   type:"OBJECT",
   properties:{items:{type:"ARRAY",items:{type:"OBJECT",properties:{
