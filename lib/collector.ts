@@ -68,7 +68,8 @@ export async function collectOfficialSources(env:Env) {
  if(!env.GEMINI_API_KEY)throw new Error("GEMINI_API_KEY secret is missing");
  const rows=await env.DB.prepare("SELECT s.id,s.name,s.url,s.source_type,st.content_hash FROM sources s LEFT JOIN collector_source_state st ON st.source_id=s.id WHERE s.active=1 ORDER BY CASE s.source_type WHEN 'OFFICIAL' THEN 0 ELSE 1 END,s.name").all<Source>();
  const report={sources:rows.results.length,checked:0,queued:0,skipped:0,errors:[] as string[]};
- for(const source of rows.results){
+ let nextSource=0;
+ const processSource=async(source:Source)=>{
   try{
    const response=await fetch(source.url,{headers:{"User-Agent":"AndhraPradeshLiveBot/1.0 (+source-attributed public news aggregation)","Accept":source.source_type==="NEWS"?"application/rss+xml, application/atom+xml, application/xml, text/xml":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(18000)});
    if(!response.ok)throw new Error(`Source returned HTTP ${response.status}`);
@@ -87,7 +88,7 @@ export async function collectOfficialSources(env:Env) {
    const contentHash=await fingerprint(text);
    if(source.content_hash===contentHash){
     await env.DB.prepare("UPDATE collector_source_state SET last_checked_at=CURRENT_TIMESTAMP,last_error=NULL WHERE source_id=?").bind(source.id).run();
-    await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;continue;
+    await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;return;
    }
    if(source.source_type!=="NEWS")items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);
    for(const item of items){
@@ -103,6 +104,10 @@ export async function collectOfficialSources(env:Env) {
    const message=error instanceof Error?error.message:"unknown error";report.errors.push(`${source.name}: ${message}`);
    await env.DB.prepare("INSERT INTO collector_source_state(source_id,content_hash,last_checked_at,last_error) VALUES(?,'',CURRENT_TIMESTAMP,?) ON CONFLICT(source_id) DO UPDATE SET last_checked_at=CURRENT_TIMESTAMP,last_error=excluded.last_error").bind(source.id,message).run().catch(()=>undefined);
   }
- }
+ };
+ // Bound concurrent network requests so the larger feed set can finish inside the Cron window.
+ await Promise.all(Array.from({length:8},async()=>{
+  while(true){const index=nextSource++;if(index>=rows.results.length)return;await processSource(rows.results[index]);}
+ }));
  return report;
 }
