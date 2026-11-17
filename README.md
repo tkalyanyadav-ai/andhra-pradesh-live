@@ -20,11 +20,10 @@ Next.js 15 App Router, React 19, TypeScript, OpenNext Cloudflare adapter, Cloudf
 6. Use `npm run preview` to test the Cloudflare Worker runtime locally.
 
 ## Cloudflare deployment
-1. Create a D1 database named `andhra-pradesh-live-db`.
-2. Replace `00000000000000000000000000000000 (replace this placeholder with your D1 database ID)` in `wrangler.jsonc` with the D1 database ID.
-3. Apply schema using `npm run db:migrate:remote`.
-4. Add Worker secret `ADMIN_API_TOKEN` in Cloudflare. Never commit secrets.
-5. Run `npm run preview`, then `npm run deploy`.
+1. Add the GitHub Actions secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+2. Push to `main` or manually run the Deploy Andhra Pradesh Live workflow. It creates or reuses the D1 database and injects its ID into the deployment config automatically.
+3. Add Worker secret `ADMIN_API_TOKEN` in Cloudflare before using editorial write APIs. Never commit secrets.
+4. Review the workflow result and verify `/api/health` after deployment.
 
 The Worker is named `andhra-pradesh-live`. The D1 binding is `DB`.
 
