@@ -13,10 +13,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
       - run: npm install
       - name: Create or find Cloudflare D1 database
         id: d1
@@ -83,6 +84,8 @@ jobs:
           collector = health.get("collector", {})
           assert collector.get("configured") is True, health
           assert collector.get("geminiConfigured") is True, "GEMINI_API_KEY is not available to the Worker"
+          if collector.get("adminConfigured") is not True:
+              print("WARNING: ADMIN_API_TOKEN is not configured; editorial admin write actions will be unavailable.")
           assert collector.get("officialSources") == 4, health
           assert collector.get("newsFeeds") == 87, health
           assert collector.get("sportsFeeds") == 23, health

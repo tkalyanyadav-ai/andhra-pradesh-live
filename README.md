@@ -23,7 +23,7 @@ Next.js 15 App Router, React 19, TypeScript, OpenNext Cloudflare adapter, Cloudf
 1. Add the GitHub Actions secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 2. Push to `main` or manually run the Deploy Andhra Pradesh Live workflow. It creates or reuses the D1 database and injects its ID into the deployment config automatically.
 3. Add Worker secret `ADMIN_API_TOKEN` in Cloudflare before using editorial write APIs. Never commit secrets.
-4. Review the workflow result and verify `/api/health` after deployment.
+4. Review the workflow result and verify `/api/health` after deployment. The health response reports `geminiConfigured` and `adminConfigured` so missing Worker secrets are visible without exposing their values.
 
 The Worker is named `andhra-pradesh-live`. The D1 binding is `DB`.
 

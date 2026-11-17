@@ -10,7 +10,7 @@ function authorized(req:Request){
 export async function GET(req:Request){
  if(!authorized(req))return jsonError("Unauthorized",401);
  const db=await getDatabase();if(!db)return jsonError("Database unavailable",503);
- const rows=await db.prepare("SELECT q.id,q.title,q.summary,q.category,q.source_url,q.published_at,q.detected_at,q.district_id,s.name AS source_name FROM collector_queue q JOIN sources s ON s.id=q.source_id WHERE q.status='PENDING' ORDER BY q.detected_at DESC LIMIT 100").all();
+ const rows=await db.prepare("SELECT q.id,q.title,q.summary,q.category,q.source_url,q.published_at,q.detected_at,q.district_id,s.name AS source_name,s.source_type FROM collector_queue q JOIN sources s ON s.id=q.source_id WHERE q.status='PENDING' ORDER BY q.detected_at DESC LIMIT 100").all();
  return Response.json({items:rows.results});
 }
 export async function POST(req:Request){
@@ -29,6 +29,6 @@ export async function POST(req:Request){
   }
   await db.prepare("UPDATE collector_queue SET status=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDING'").bind(body.action==="approve"?"APPROVED":"REJECTED",body.id).run();
   await db.prepare("INSERT INTO audit_log(id,actor,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(makeId(),"admin-token",body.action!.toUpperCase(),"collector_queue",body.id).run();
-  return Response.json({ok:true,status:body.action==="approve"?"APPROVED":"REJECTED"});
+  return Response.json({ok:true,status:body.action==="approve"?"APPROVED":"REJECTED",verificationStatus:body.action==="approve"?(item.source_type==="OFFICIAL"?"CONFIRMED":"AWAITING_OFFICIAL_CONFIRMATION"):null});
  }catch{return jsonError("Review action could not be completed",409)}
 }
