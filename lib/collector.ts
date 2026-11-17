@@ -9,15 +9,15 @@ const schema = {type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJEC
  publishedAt:{type:"STRING"},sourceUrl:{type:"STRING"},isRelevant:{type:"BOOLEAN"}
 },required:["title","summary","category","publishedAt","sourceUrl","isRelevant"]}}},required:["items"]};
 function cleanHtml(html:string) {
- return html.replace(/<(script|style|noscript|svg)[^>]*>[\\s\\S]*?<\\/\\1>/gi," ").replace(/<(br|\\/p|\\/div|\\/li|\\/tr|\\/h[1-6])\\b[^>]*>/gi,"\\n").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/[\\t\\r ]+/g," ").replace(/\\n\\s*/g,"\\n").trim().slice(0,18000);
+ return html.replace(/<(script|style|noscript|svg)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6])\b[^>]*>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/[\t\r ]+/g," ").replace(/\n\s*/g,"\n").trim().slice(0,18000);
 }
-function decodeXml(s:string){return s.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/<[^>]+>/g," ").replace(/\\s+/g," ").trim();}
+function decodeXml(s:string){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
 function rssEntries(xml:string){
- const blocks=[...xml.matchAll(/<(item|entry)\\b[^>]*>([\\s\\S]*?)<\\/\\1>/gi)].slice(0,30);
- return blocks.map(m=>{const b=m[2];const get=(tag:string)=>decodeXml(b.match(new RegExp("<"+tag+"\\b[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))?.[1]??"");const link=b.match(/<link\\b[^>]*href=["']([^"']+)["'][^>]*\\/?\\s*>/i)?.[1]??get("link");return {title:get("title"),link:link.trim(),date:get("pubDate")||get("published")||get("updated"),description:(get("description")||get("summary")||get("content")).slice(0,900)};}).filter(x=>x.title&&/^https?:\\/\\//i.test(x.link));
+ const blocks=[...xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,30);
+ return blocks.map(m=>{const b=m[2];const get=(tag:string)=>decodeXml(b.match(new RegExp("<"+tag+"\b[^>]*>([\s\S]*?)<\/"+tag+">","i"))?.[1]??"");const link=b.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*\/?\s*>/i)?.[1]??get("link");return {title:get("title"),link:link.trim(),date:get("pubDate")||get("published")||get("updated"),description:(get("description")||get("summary")||get("content")).slice(0,900)};}).filter(x=>x.title&&/^https?:\/\//i.test(x.link));
 }
 async function fingerprint(value:string) {
- const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value.toLowerCase().replace(/\\s+/g," ").trim()));
+ const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value.toLowerCase().replace(/\s+/g," ").trim()));
  return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 async function summarize(apiKey:string,source:Source,text:string,allowedUrls:Set<string>) {
@@ -45,7 +45,7 @@ export async function collectOfficialSources(env:Env) {
     const entries=rssEntries(body);
     if(!entries.length)throw new Error("RSS/Atom feed contained no readable entries");
     for(const entry of entries)allowedUrls.add(entry.link);
-    text=entries.map((e,i)=>`ITEM ${i+1}\\nTITLE: ${e.title}\\nPUBLISHED: ${e.date}\\nARTICLE_URL: ${e.link}\\nDESCRIPTION: ${e.description}`).join("\\n\\n").slice(0,18000);
+    text=entries.map((e,i)=>`ITEM ${i+1}\nTITLE: ${e.title}\nPUBLISHED: ${e.date}\nARTICLE_URL: ${e.link}\nDESCRIPTION: ${e.description}`).join("\n\n").slice(0,18000);
    }else{text=cleanHtml(body);}
    if(text.length<80)throw new Error("Source page did not contain enough readable text");
    const contentHash=await fingerprint(text);
@@ -57,7 +57,7 @@ export async function collectOfficialSources(env:Env) {
    for(const item of items){
     const articleUrl=allowedUrls.has(item.sourceUrl||"")?item.sourceUrl!:source.url;
     const fp=await fingerprint(articleUrl+"|"+item.title);
-    const date=/^\\d{4}-\\d{2}-\\d{2}$/.test(item.publishedAt)?item.publishedAt:null;
+    const date=/^\d{4}-\d{2}-\d{2}$/.test(item.publishedAt)?item.publishedAt:null;
     const result=await env.DB.prepare("INSERT OR IGNORE INTO collector_queue(id,fingerprint,source_id,title,summary,category,source_url,published_at) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),fp,source.id,item.title.trim().slice(0,240),item.summary.trim().slice(0,1200),item.category,articleUrl,date).run() as {meta?:{changes?:number}};
     if(result.meta?.changes)report.queued++;else report.skipped++;
    }
