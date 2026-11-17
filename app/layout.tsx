@@ -1,12 +1,3 @@
-import type { Metadata } from "next";
-import "./globals.css";
-
-export const metadata: Metadata = {
-  title: "Andhra Pradesh Live | Every Update. Every District.",
-  description: "Andhra Pradesh government orders, administration, Amaravati development, district updates and verified state news.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-};
-
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
-}
+import type {Metadata} from "next";import "./globals.css";
+export const metadata:Metadata={title:"Andhra Pradesh Live | Government, Districts & Amaravati Updates",description:"A source-first Andhra Pradesh portal for Government Orders, IAS and IPS postings, district updates, Amaravati development, schemes and public notices.",metadataBase:new URL(process.env.NEXT_PUBLIC_SITE_URL||"https://andhra-pradesh-live.tkalyan-yadav.workers.dev"),applicationName:"Andhra Pradesh Live",openGraph:{title:"Andhra Pradesh Live",description:"Every Update. Every District. Every Development. One Andhra Pradesh.",type:"website"}};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

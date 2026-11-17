@@ -1,0 +1,8 @@
+import {getDatabase} from "@/lib/cloudflare-db";
+export const dynamic="force-dynamic";
+export async function GET(req:Request){const q=new URL(req.url).searchParams.get("q")?.trim()??"";if(q.length<2)return Response.json({items:[]});const db=await getDatabase();if(!db)return Response.json({items:[],configured:false});const like="%"+q.slice(0,100)+"%";try{const [news,orders,officers,districts]=await Promise.all([
+db.prepare("SELECT 'news' type,title,summary detail,source_url url,published_at date,slug FROM articles WHERE is_demo=0 AND(title LIKE ? OR summary LIKE ?) ORDER BY published_at DESC LIMIT 8").bind(like,like).all(),
+db.prepare("SELECT 'government-order' type,go_number||' — '||subject title,category detail,source_url url,issue_date date,id slug FROM government_orders WHERE is_demo=0 AND(go_number LIKE ? OR subject LIKE ?) ORDER BY issue_date DESC LIMIT 8").bind(like,like).all(),
+db.prepare("SELECT 'officer' type,full_name title,service detail,official_order_url url,effective_from date,id slug FROM officers LEFT JOIN officer_postings ON officers.id=officer_postings.officer_id WHERE full_name LIKE ? LIMIT 8").bind(like).all(),
+db.prepare("SELECT 'district' type,name title,'District directory' detail,official_url url,NULL date,slug FROM districts WHERE name LIKE ? AND active=1 LIMIT 8").bind(like).all()]);
+return Response.json({items:[...news.results,...orders.results,...officers.results,...districts.results].slice(0,24),configured:true})}catch{return Response.json({items:[],configured:false},{status:503})}}

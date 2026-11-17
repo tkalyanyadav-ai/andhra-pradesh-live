@@ -1,10 +1,3 @@
-import { NextResponse } from "next/server";
-export async function GET() {
-  return NextResponse.json({
-    status: "ok",
-    service: "andhra-pradesh-live",
-    databaseConfigured: Boolean(process.env.DATABASE_URL),
-    liveSourcesConfigured: false,
-    note: "No live source monitoring is claimed until source connectors are configured."
-  });
-}
+import {getDatabase} from "@/lib/cloudflare-db";
+export const dynamic="force-dynamic";
+export async function GET(){const db=await getDatabase();let database="not_configured";if(db){try{await db.prepare("SELECT 1 AS ok").first();database="connected"}catch{database="unavailable"}}return Response.json({status:database==="connected"?"ok":"degraded",service:"andhra-pradesh-live",database,liveSourceMonitoring:false,note:"Automated source polling is not enabled until official access and a scheduled worker are configured.",timestamp:new Date().toISOString()},{status:database==="unavailable"?503:200})}

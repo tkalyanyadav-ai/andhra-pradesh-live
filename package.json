@@ -1,29 +1,6 @@
 {
-  "name": "andhra-pradesh-live",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.0",
-    "lucide-react": "^0.468.0",
-    "next": "^15.5.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "zod": "^4.1.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.15.0",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "prisma": "^6.19.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.8.0"
-  }
+  "name":"andhra-pradesh-live","version":"2.0.0","private":true,
+  "scripts":{"dev":"next dev","build":"next build","start":"next start","cf:build":"opennextjs-cloudflare build","preview":"opennextjs-cloudflare build && opennextjs-cloudflare preview","deploy":"opennextjs-cloudflare build && opennextjs-cloudflare deploy","db:migrate:local":"wrangler d1 migrations apply andhra-pradesh-live-db --local","db:migrate:remote":"wrangler d1 migrations apply andhra-pradesh-live-db --remote"},
+  "dependencies":{"@opennextjs/cloudflare":"^1.0.0","lucide-react":"^0.468.0","next":"^15.5.0","react":"^19.1.0","react-dom":"^19.1.0","zod":"^4.1.0"},
+  "devDependencies":{"@types/node":"^22.15.0","@types/react":"^19.1.0","@types/react-dom":"^19.1.0","typescript":"^5.8.0","wrangler":"^4.0.0"}
 }
