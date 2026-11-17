@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VerificationStatus {
+  CONFIRMED
+  DEVELOPING
+  AWAITING_OFFICIAL_CONFIRMATION
+}
+
+enum SourceType {
+  OFFICIAL
+  NEWS
+}
+
+enum OfficerService {
+  IAS
+  IPS
+}
+
+model NewsSource {
+  id          String     @id @default(cuid())
+  name        String
+  url         String     @unique
+  type        SourceType
+  active      Boolean    @default(true)
+  lastChecked DateTime?
+  createdAt   DateTime   @default(now())
+  articles    Article[]
+  orders      GovernmentOrder[]
+}
+
+model Article {
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  title       String
+  titleTe     String?
+  summary     String
+  summaryTe   String?
+  body        String?
+  category    String
+  districtId  String?
+  district    District?          @relation(fields: [districtId], references: [id])
+  sourceId    String?
+  source      NewsSource?         @relation(fields: [sourceId], references: [id])
+  sourceUrl   String
+  publishedAt DateTime
+  checkedAt   DateTime?
+  status      VerificationStatus @default(DEVELOPING)
+  isDemo      Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  @@index([publishedAt, category])
+  @@index([districtId, publishedAt])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  nameTe    String?
+  slug      String   @unique
+  orders    GovernmentOrder[]
+  postings  OfficerPosting[]
+}
+
+model District {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  nameTe    String?
+  slug      String   @unique
+  active    Boolean  @default(true)
+  sourceUrl String?
+  articles  Article[]
+  postings  OfficerPosting[]
+}
+
+model Officer {
+  id          String           @id @default(cuid())
+  fullName    String
+  service     OfficerService
+  batch       String?
+  createdAt   DateTime         @default(now())
+  postings    OfficerPosting[]
+  @@index([fullName, service])
+}
+
+model OfficerPosting {
+  id             String      @id @default(cuid())
+  officerId      String
+  officer        Officer     @relation(fields: [officerId], references: [id])
+  designation    String
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  districtId     String?
+  district       District?   @relation(fields: [districtId], references: [id])
+  orderNumber    String?
+  orderDate      DateTime?
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  officialOrderUrl String?
+  verified       Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  @@index([officerId, effectiveFrom])
+}
+
+model GovernmentOrder {
+  id            String   @id @default(cuid())
+  goNumber      String
+  category      String
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  subject       String
+  summary       String?
+  issueDate     DateTime
+  pdfUrl        String?
+  sourceUrl     String
+  extractedText String?
+  verified      Boolean  @default(false)
+  isDemo        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  @@unique([goNumber, issueDate])
+  @@index([issueDate, category])
+}
+
+model Scheme {
+  id          String   @id @default(cuid())
+  name        String
+  nameTe      String?
+  description String
+  eligibility String?
+  applyUrl    String?
+  sourceUrl   String
+  updatedAt   DateTime @updatedAt
+}
+
+model RecruitmentNotice {
+  id          String   @id @default(cuid())
+  title       String
+  organization String
+  deadline    DateTime?
+  notificationUrl String
+  applyUrl    String?
+  sourceUrl   String
+  createdAt   DateTime @default(now())
+}
+
+model AmaravatiProject {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String
+  sourceUrl   String
+  updatedAt   DateTime @updatedAt
+}
+
+model SourceCheck {
+  id          String   @id @default(cuid())
+  sourceUrl   String
+  checkedAt   DateTime @default(now())
+  success     Boolean
+  httpStatus  Int?
+  details     String?
+  @@index([sourceUrl, checkedAt])
+}
+
+model EditorialCorrection {
+  id          String   @id @default(cuid())
+  articleId   String
+  reason      String
+  previousText String?
+  correctedText String?
+  editor      String
+  createdAt   DateTime @default(now())
+}
+
+model Subscription {
+  id         String   @id @default(cuid())
+  email      String
+  district   String?
+  category   String?
+  createdAt  DateTime @default(now())
+  @@index([email])
+}
