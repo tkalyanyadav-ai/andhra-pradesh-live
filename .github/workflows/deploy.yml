@@ -1,4 +1,7 @@
 name: Deploy Andhra Pradesh Live
+concurrency:
+  group: andhra-pradesh-live-production
+  cancel-in-progress: true
 on:
   push:
     branches: [main]
