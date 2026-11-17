@@ -14,6 +14,14 @@ function cleanHtml(html:string) {
 const districtIds=["ap-district-asr","ap-district-anakapalli","ap-district-anantapuramu","ap-district-annamayya","ap-district-bapatla","ap-district-chittoor","ap-district-konaseema","ap-district-east-godavari","ap-district-eluru","ap-district-guntur","ap-district-kakinada","ap-district-krishna","ap-district-kurnool","ap-district-nandyal","ap-district-ntr","ap-district-palnadu","ap-district-parvathipuram-manyam","ap-district-prakasam","ap-district-spsr-nellore","ap-district-sri-sathya-sai","ap-district-srikakulam","ap-district-tirupati","ap-district-visakhapatnam","ap-district-vizianagaram","ap-district-west-godavari","ap-district-ysr-kadapa","ap-district-markapuram","ap-district-polavaram"];
 function districtForSource(sourceId:string){const m=sourceId.match(/^src-rss-district-(\d{2})$/);return m?districtIds[Number(m[1])-1]??null:null;}
 function parseDate(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
+function classifyFeedNews(sourceId:string,value:string){
+ const id=sourceId.toLowerCase();
+ // Telugu publisher headlines may not contain English sport/cinema keywords.
+ // Use the configured feed's topic as a reliable fallback for these dedicated feeds.
+ if(/^src-rss-(sports|mykhel)-/.test(id)||/^src-rss-hindu-(sport|cricket|football|tennis|hockey|athletics|motorsport|other-sports)/.test(id)||/^src-rss-google-(ap-sports|ap-cricket|telugu-sports)/.test(id))return "Sports";
+ if(/^src-rss-(entertainment|filmibeat)-/.test(id)||/^src-rss-hindu-(entertainment|movies|reviews|music)/.test(id)||/^src-rss-google-(tollywood|telugu-movies|telugu-ott|indian-cinema|music)/.test(id))return "Movies & Entertainment";
+ return classifyNews(value);
+}
 function classifyNews(value:string){
  const s=value.toLowerCase();
  if(/tollywood|bollywood|kollywood|cinema|movie|film|ott|web series|box office|trailer|teaser|actor|actress|director|producer|film music|soundtrack|movie review|film review|release date/.test(s))return "Movies & Entertainment";
@@ -82,7 +90,7 @@ export async function collectOfficialSources(env:Env) {
     text=entries.map((e,i)=>`ITEM ${i+1}\nTITLE: ${e.title}\nPUBLISHED: ${e.date}\nARTICLE_URL: ${e.link}\nDESCRIPTION: ${e.description}`).join("\n\n").slice(0,18000);
     // RSS headlines and descriptions are publisher-attributed source material. Queue them directly
     // to avoid spending one Gemini request per feed; editorial review still controls publication.
-    items=entries.map(e=>({title:e.title,summary:e.description||e.title,category:classifyNews(e.title+" "+e.description),publishedAt:parseDate(e.date),sourceUrl:e.link,isRelevant:true}));
+    items=entries.map(e=>({title:e.title,summary:e.description||e.title,category:classifyFeedNews(source.id,e.title+" "+e.description),publishedAt:parseDate(e.date),sourceUrl:e.link,isRelevant:true}));
    }else{text=cleanHtml(body);}
    if(text.length<80)throw new Error("Source page did not contain enough readable text");
    const contentHash=await fingerprint(text);
