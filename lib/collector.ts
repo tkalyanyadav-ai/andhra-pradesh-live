@@ -5,7 +5,7 @@ type Env = { DB: Database; GEMINI_API_KEY?: string };
 type Candidate = {title:string;summary:string;category:string;publishedAt:string;isRelevant:boolean;sourceUrl?:string};
 const MODEL = "gemini-3.5-flash-lite";
 const schema = {type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJECT",properties:{
- title:{type:"STRING"},summary:{type:"STRING"},category:{type:"STRING",enum:["Government Order","Recruitment","IAS/IPS","District Update","Amaravati","Scheme","Public Notice","Politics","Crime & Safety","Business","Agriculture","Education","Weather","Sports","Other"]},
+ title:{type:"STRING"},summary:{type:"STRING"},category:{type:"STRING",enum:["Government Order","Recruitment","IAS/IPS","District Update","Amaravati","Scheme","Public Notice","Politics","Crime & Safety","Business","Agriculture","Education","Weather","Sports","Movies & Entertainment","Other"]},
  publishedAt:{type:"STRING"},sourceUrl:{type:"STRING"},isRelevant:{type:"BOOLEAN"}
 },required:["title","summary","category","publishedAt","sourceUrl","isRelevant"]}}},required:["items"]};
 function cleanHtml(html:string) {
@@ -16,6 +16,8 @@ function districtForSource(sourceId:string){const m=sourceId.match(/^src-rss-dis
 function parseDate(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
 function classifyNews(value:string){
  const s=value.toLowerCase();
+ if(/tollywood|bollywood|kollywood|cinema|movie|film|ott|web series|box office|trailer|teaser|actor|actress|director|producer|film music|soundtrack|movie review|film review|release date/.test(s))return "Movies & Entertainment";
+ if(/cricket|ipl|football|soccer|tennis|badminton|hockey|kabaddi|boxing|wrestling|athletics|olympic|paralympic|sports|sporting|tournament|championship|world cup|f1|formula one|chess|volleyball|basketball/.test(s))return "Sports";
  if(/amaravati|apcrda|capital city/.test(s))return "Amaravati";
  if(/ias|ips|collector|superintendent of police|transferred|posting/.test(s))return "IAS/IPS";
  if(/appsc|recruitment|notification|vacanc|job|exam|hall ticket|result/.test(s))return "Recruitment";
