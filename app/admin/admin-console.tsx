@@ -2,7 +2,7 @@
 import {useState} from "react";
 const types=["news","government-orders","districts","departments","officers","officer-postings","amaravati","schemes","recruitment"];
 const examples:Record<string,object>={news:{slug:"unique-story-slug",title:"Headline",summary:"Factual summary",category:"Government",source_url:"https://official.example.gov.in/notice",published_at:"2026-11-17T10:00:00Z"},"government-orders":{go_number:"Exact GO number",category:"General",subject:"Exact subject from order",issue_date:"2026-11-17",source_url:"https://goir.ap.gov.in/"},"officer-postings":{officer_id:"Existing officer record ID",designation:"Designation",effective_from:"2026-11-17",official_order_url:"https://www.ap.gov.in/"}};
-type QueueItem={id:string;title:string;summary:string;category:string;source_url:string;published_at:string|null;detected_at:string;source_name:string};
+type QueueItem={id:string;title:string;summary:string;category:string;source_url:string;published_at:string|null;detected_at:string;source_name:string;source_type:string};
 export default function AdminConsole(){
  const[token,setToken]=useState("");const[type,setType]=useState("news");const[payload,setPayload]=useState(JSON.stringify(examples.news,null,2));const[msg,setMsg]=useState("");const[busy,setBusy]=useState(false);const[items,setItems]=useState<QueueItem[]>([]);
  async function loadQueue(){if(!token){setMsg("Enter the admin API token first.");return}setBusy(true);try{const r=await fetch("/api/admin/collector",{headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error??"Could not load queue");setItems(d.items??[]);setMsg("Loaded "+(d.items?.length??0)+" pending items.")}catch(e){setMsg(e instanceof Error?e.message:"Queue request failed.")}finally{setBusy(false)}}
@@ -11,12 +11,12 @@ export default function AdminConsole(){
  return <section className="admin-console">
  <label>Admin API token<input type="password" value={token} onChange={e=>setToken(e.target.value)} autoComplete="off"/></label>
  <div><h2>AI collector review queue</h2><p>Collected updates from official sources and news feeds are held here until you review them.</p><button onClick={loadQueue} disabled={busy}>{busy?"Loading…":"Load pending updates"}</button>
- {items.map(item=><article key={item.id} style={{border:"1px solid #ddd",borderRadius:10,padding:14,marginTop:12}}><small>{item.source_name} · {item.category} · {item.detected_at}</small><h3>{item.title}</h3><p>{item.summary}</p><a href={item.source_url} target="_blank" rel="noreferrer">Open original source</a><div style={{display:"flex",gap:8,marginTop:10}}><button disabled={busy} onClick={()=>review(item.id,"approve")}>Approve & publish</button><button disabled={busy} onClick={()=>review(item.id,"reject")}>Reject</button></div></article>)}
+ {items.map(item=><article key={item.id} style={{border:"1px solid #ddd",borderRadius:10,padding:14,marginTop:12}}><small>{item.source_name} · {item.source_type==="OFFICIAL"?"OFFICIAL SOURCE":"NEWS / MEDIA SOURCE"} · {item.category} · {item.detected_at}</small><h3>{item.title}</h3><p>{item.summary}</p><a href={item.source_url} target="_blank" rel="noreferrer">Open original source</a><div style={{display:"flex",gap:8,marginTop:10}}><button disabled={busy} onClick={()=>review(item.id,"approve")}>Approve for publication</button><button disabled={busy} onClick={()=>review(item.id,"reject")}>Reject</button></div></article>)}
  </div>
  <hr/><h2>Manual source-linked entry</h2>
  <label>Record type<select value={type} onChange={e=>{setType(e.target.value);setPayload(JSON.stringify(examples[e.target.value]??{},null,2))}}>{types.map(t=><option key={t}>{t}</option>)}</select></label>
  <label>Record JSON<textarea rows={13} value={payload} onChange={e=>setPayload(e.target.value)} spellCheck={false}/></label>
  <button onClick={save} disabled={busy}>{busy?"Saving…":"Save source-linked record"}</button>
- {msg&&<p role="status">{msg}</p>}<small>Verify every candidate against its original source before approval. Approved AI summaries are marked confirmed by your editorial action.</small>
+ {msg&&<p role="status">{msg}</p>}<small>Verify every candidate against its original source before approval. Approval publishes the item, but does not independently verify it. Items from media/news feeds remain marked awaiting official confirmation; only official-source items receive the confirmed label.</small>
  </section>
 }
