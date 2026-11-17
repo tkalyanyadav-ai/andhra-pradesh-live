@@ -13,6 +13,7 @@ INSERT OR IGNORE INTO sources(id,name,url,source_type,active) VALUES
 ('src-rss-mykhel-kabaddi','MyKhel Telugu Kabaddi','https://telugu.mykhel.com/rss/feeds/telugu-kabaddi-fb.xml','NEWS',1),
 ('src-rss-mykhel-tennis','MyKhel Telugu Tennis','https://telugu.mykhel.com/rss/feeds/telugu-tennis-fb.xml','NEWS',1),
 ('src-rss-mykhel-more','MyKhel Telugu Other Sports','https://telugu.mykhel.com/rss/feeds/telugu-more-sports-fb.xml','NEWS',1),
+('src-rss-mykhel-controversies','MyKhel Telugu Sports Controversies','https://telugu.mykhel.com/rss/feeds/telugu-controversies-fb.xml','NEWS',1),
 ('src-rss-filmibeat-main','Filmibeat Telugu Cinema','https://telugu.filmibeat.com/rss/feeds/filmibeat-telugu-fb.xml','NEWS',1),
 ('src-rss-filmibeat-bollywood','Filmibeat Bollywood','https://telugu.filmibeat.com/rss/feeds/telugu-bollywood-fb.xml','NEWS',1),
 ('src-rss-filmibeat-interviews','Filmibeat Telugu Interviews','https://telugu.filmibeat.com/rss/feeds/telugu-interviews-fb.xml','NEWS',1),
