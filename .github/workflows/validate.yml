@@ -12,6 +12,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - name: Audit dependency vulnerabilities
+        run: npm audit --audit-level=high
       - name: TypeScript validation
         run: npx tsc --noEmit
       - name: Validate production deployment workflow YAML
