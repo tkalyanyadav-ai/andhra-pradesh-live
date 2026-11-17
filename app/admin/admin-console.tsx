@@ -10,7 +10,7 @@ export default function AdminConsole(){
  async function save(){let body:unknown;try{body=JSON.parse(payload)}catch{setMsg("Invalid JSON.");return}if(!token){setMsg("Enter the admin API token.");return}setBusy(true);try{const r=await fetch("/api/admin/"+type,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body)});const d=await r.json();setMsg(r.ok?"Record saved. ID: "+d.id:(d.error??"Save failed."))}catch{setMsg("Request failed.")}finally{setBusy(false)}}
  return <section className="admin-console">
  <label>Admin API token<input type="password" value={token} onChange={e=>setToken(e.target.value)} autoComplete="off"/></label>
- <div><h2>AI collector review queue</h2><p>Gemini candidates from official sources are held here until you review them.</p><button onClick={loadQueue} disabled={busy}>{busy?"Loading…":"Load pending updates"}</button>
+ <div><h2>AI collector review queue</h2><p>Collected updates from official sources and news feeds are held here until you review them.</p><button onClick={loadQueue} disabled={busy}>{busy?"Loading…":"Load pending updates"}</button>
  {items.map(item=><article key={item.id} style={{border:"1px solid #ddd",borderRadius:10,padding:14,marginTop:12}}><small>{item.source_name} · {item.category} · {item.detected_at}</small><h3>{item.title}</h3><p>{item.summary}</p><a href={item.source_url} target="_blank" rel="noreferrer">Open original source</a><div style={{display:"flex",gap:8,marginTop:10}}><button disabled={busy} onClick={()=>review(item.id,"approve")}>Approve & publish</button><button disabled={busy} onClick={()=>review(item.id,"reject")}>Reject</button></div></article>)}
  </div>
  <hr/><h2>Manual source-linked entry</h2>
