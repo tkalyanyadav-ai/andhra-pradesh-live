@@ -14,5 +14,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: TypeScript validation
         run: npx tsc --noEmit
+      - name: Validate production deployment workflow YAML
+        run: ruby -e 'require "yaml"; YAML.parse_file(".github/workflows/deploy.yml")'
       - name: Cloudflare production build
         run: npx opennextjs-cloudflare build
