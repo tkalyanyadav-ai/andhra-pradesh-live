@@ -1,10 +1,11 @@
 {
   "$schema":"node_modules/wrangler/config-schema.json",
   "name":"andhra-pradesh-live",
-  "main":".open-next/worker.js",
+  "main":"worker.ts",
   "compatibility_date":"2026-11-17",
   "compatibility_flags":["nodejs_compat"],
   "assets":{"directory":".open-next/assets","binding":"ASSETS"},
   "d1_databases":[{"binding":"DB","database_name":"andhra-pradesh-live-db","database_id":"00000000000000000000000000000000","migrations_dir":"migrations"}],
+  "triggers":{"crons":["*/30 * * * *"]},
   "observability":{"enabled":true}
 }
