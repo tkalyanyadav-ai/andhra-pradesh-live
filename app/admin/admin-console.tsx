@@ -1,7 +1,7 @@
 "use client";
 import {useState} from "react";
 const types=["news","government-orders","districts","departments","officers","officer-postings","amaravati","schemes","recruitment"];
-const examples:Record<string,object>={news:{slug:"unique-story-slug",title:"Headline",summary:"Factual summary",category:"Government",source_url:"https://official.example.gov.in/notice",published_at:"2026-11-17T10:00:00Z"},"government-orders":{go_number:"Exact GO number",category:"General",subject:"Exact subject from order",issue_date:"2026-11-17",source_url:"https://goir.ap.gov.in/"}};
+const examples:Record<string,object>={news:{slug:"unique-story-slug",title:"Headline",summary:"Factual summary",category:"Government",source_url:"https://official.example.gov.in/notice",published_at:"2026-11-17T10:00:00Z"},"government-orders":{go_number:"Exact GO number",category:"General",subject:"Exact subject from order",issue_date:"2026-11-17",source_url:"https://goir.ap.gov.in/"},"officer-postings":{officer_id:"Existing officer record ID",designation:"Designation",effective_from:"2026-11-17",official_order_url:"https://www.ap.gov.in/"}};
 type QueueItem={id:string;title:string;summary:string;category:string;source_url:string;published_at:string|null;detected_at:string;source_name:string};
 export default function AdminConsole(){
  const[token,setToken]=useState("");const[type,setType]=useState("news");const[payload,setPayload]=useState(JSON.stringify(examples.news,null,2));const[msg,setMsg]=useState("");const[busy,setBusy]=useState(false);const[items,setItems]=useState<QueueItem[]>([]);

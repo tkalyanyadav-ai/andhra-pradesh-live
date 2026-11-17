@@ -4,7 +4,7 @@
 A source-first Andhra Pradesh public information portal. The app includes a multi-section Next.js site, searchable content APIs, Cloudflare D1 data model, protected editorial write API and Workers deployment configuration.
 
 ## Sections
-Amaravati projects; IAS and IPS posting history; districts; departments; Government Orders; news; schemes; recruitment; portal search; editorial admin console.
+Amaravati projects; IAS and IPS posting history; districts; departments; Government Orders; latest published updates on the homepage; news; sports; movies and entertainment; schemes; recruitment; portal search; editorial admin console.
 
 No fabricated news, Government Order numbers, officer transfers, district facts or project progress are seeded. Empty sections remain empty until source-linked records are entered and checked.
 
@@ -27,6 +27,9 @@ Next.js 15 App Router, React 19, TypeScript, OpenNext Cloudflare adapter, Cloudf
 
 The Worker is named `andhra-pradesh-live`. The D1 binding is `DB`.
 
+## Homepage and news experience
+The homepage surfaces the latest approved articles with source links and verification labels. Sports and Movies & Entertainment sections filter published news by category on the server, so their pages are not limited to filtering only the first general-news results. Collected reports remain in the editorial queue until reviewed.
+
 ## API
 - GET /api/health — runtime and D1 status
 - GET /api/search?q=... — articles, GOs, officers and districts
@@ -41,7 +44,7 @@ The deployment workflow uses `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` 
 
 ## Source integrity
 Official source starting points: https://www.ap.gov.in/ ; https://goir.ap.gov.in/ ; https://crda.ap.gov.in/ ; https://www.india.gov.in/ .
-Do not assume RSS/API access or automated polling is permitted. Assess source terms, robots policy, access controls and rate limits before building connectors. The Cloudflare Cron Trigger checks sources every 30 minutes. The collector monitors four official sources (APPSC, Government Orders, the AP Government portal and APCRDA) plus 41 Google News RSS discovery feeds: 13 statewide topic searches and 28 district searches. RSS headlines, descriptions, dates and feed-provided article links are retained and queued for editorial review. Google News article links may redirect to the publisher; they are not guaranteed to be direct publisher URLs; RSS collection does not consume a Gemini call per feed. Gemini is used for extraction from official HTML pages. Approved media stories are labelled as awaiting official confirmation; an editor must not present a media report as an official government confirmation. District-specific feed items are linked to their district record. Source fingerprints and duplicate fingerprints reduce repeat processing. This is a broad discovery layer, not a guarantee of every story in Andhra Pradesh: feed ranking, publisher availability, robots/terms, network access and RSS changes affect coverage. The current feeds use the English India locale; Telugu feeds and a fully translated Telugu interface are not yet implemented. Google News RSS is a discovery service; use the feed-provided link to reach the publisher. Do not bypass paywalls or access controls.
+Do not assume RSS/API access or automated polling is permitted. Assess source terms, robots policy, access controls and rate limits before building connectors. The Cloudflare Cron Trigger checks sources every 30 minutes. The collector monitors four official sources (APPSC, Government Orders, the AP Government portal and APCRDA) plus 87 RSS discovery feeds: 13 statewide topic searches, 28 district searches, and 46 sports/entertainment feeds. The latter combine publisher feeds from Oneindia Telugu, MyKhel Telugu and Filmibeat Telugu, plus The Hindu's sports and entertainment sections, with Google News topic discovery for Andhra Pradesh sports, cricket, Telugu sports, Tollywood, movie releases/reviews, OTT, Indian cinema and Telugu film music. RSS headlines, descriptions, dates and feed-provided article links are retained and queued for editorial review. Google News article links may redirect to the publisher; they are not guaranteed to be direct publisher URLs; RSS collection does not consume a Gemini call per feed. Gemini is used for extraction from official HTML pages. Approved media stories are labelled as awaiting official confirmation; an editor must not present a media report as an official government confirmation. District-specific feed items are linked to their district record. Source fingerprints and duplicate fingerprints reduce repeat processing. This is a broad discovery layer, not a guarantee of every story in Andhra Pradesh: feed ranking, publisher availability, robots/terms, network access and RSS changes affect coverage. The Google News discovery feeds use the English India locale; several publisher sports and cinema feeds provide Telugu-language coverage. A fully translated Telugu interface and comprehensive direct feeds from every district-level sports association, cinema body and local publisher are not yet implemented. Google News RSS is a discovery service; use the feed-provided link to reach the publisher. Do not bypass paywalls or access controls.
 
 ## Production hardening still required
 Add user-based authentication and role management, rate limiting, verified email subscriptions, backup/restore tests, abuse controls, monitoring and security review. Protect the admin API token and rotate it if exposed.
