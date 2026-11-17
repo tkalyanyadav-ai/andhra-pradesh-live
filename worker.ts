@@ -6,7 +6,7 @@ type Env = { DB: any; GEMINI_API_KEY?: string };
 
 export default {
   fetch: openNextWorker.fetch,
-  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+  async scheduled(_controller: unknown, env: Env, _ctx: unknown) {
     const report = await collectOfficialSources(env);
     console.log("[ap-live-collector]", JSON.stringify(report));
   },
