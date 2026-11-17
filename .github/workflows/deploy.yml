@@ -48,7 +48,7 @@ jobs:
           config["d1_databases"][0]["database_id"] = os.environ["D1_DATABASE_ID"]
           with open(path, "w", encoding="utf-8") as f:
               json.dump(config, f, indent=2)
-              f.write("\\n")
+              f.write("\n")
           PY
       - name: Build Cloudflare Worker
         run: npx opennextjs-cloudflare build
@@ -58,7 +58,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
