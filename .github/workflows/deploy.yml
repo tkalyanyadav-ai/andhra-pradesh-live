@@ -66,3 +66,31 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+      - name: Smoke test deployed portal and collector configuration
+        env:
+          WORKER_URL: https://andhra-pradesh-live.tkalyan-yadav.workers.dev
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error "$WORKER_URL/" >/dev/null
+          curl --fail --silent --show-error "$WORKER_URL/api/health" -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/health.json", encoding="utf-8") as f:
+              health = json.load(f)
+          assert health.get("status") == "ok", health
+          assert health.get("database") == "connected", health
+          collector = health.get("collector", {})
+          assert collector.get("configured") is True, health
+          assert collector.get("geminiConfigured") is True, "GEMINI_API_KEY is not available to the Worker"
+          assert collector.get("sources") == 4, health
+          print("Smoke test passed: homepage, D1, Gemini secret and four official sources.")
+          PY
+          curl --fail --silent --show-error "$WORKER_URL/api/content/districts?limit=30" -o /tmp/districts.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/districts.json", encoding="utf-8") as f:
+              data = json.load(f)
+          assert data.get("configured") is True, data
+          assert len(data.get("items", [])) == 28, data
+          print("Smoke test passed: 28 district records are available.")
+          PY
