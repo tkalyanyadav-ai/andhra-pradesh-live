@@ -31,7 +31,7 @@ function classifyNews(value:string){
 function decodeXml(s:string){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
 function rssEntries(xml:string){
  const blocks=[...xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,30);
- const get=(tag:string)=>decodeXml(b.match(new RegExp("<"+tag+"\\b[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))?.[1]??"");const link=b.match(/<link\\b[^>]*href=["']([^"']+)["'][^>]*\\/?\\s*>/i)?.[1]??get("link");return {title:get("title"),link:link.trim(),date:get("pubDate")||get("published")||get("updated"),description:(get("description")||get("summary")||get("content")).slice(0,900)};}).filter(x=>x.title&&/^https?:\\/\\//i.test(x.link));
+ const get=(tag:string)=>decodeXml(b.match(new RegExp("<"+tag+"\\b[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))?.[1]??"");const link=b.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*\/?\s*>/i)?.[1]??get("link");return {title:get("title"),link:link.trim(),date:get("pubDate")||get("published")||get("updated"),description:(get("description")||get("summary")||get("content")).slice(0,900)};}).filter(x=>x.title&&/^https?:\/\//i.test(x.link));
 }
 async function fingerprint(value:string) {
  const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value.toLowerCase().replace(/\s+/g," ").trim()));
