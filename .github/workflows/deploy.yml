@@ -83,6 +83,8 @@ jobs:
           collector = health.get("collector", {})
           assert collector.get("configured") is True, health
           assert collector.get("geminiConfigured") is True, "GEMINI_API_KEY is not available to the Worker"
+          if collector.get("adminConfigured") is not True:
+              print("WARNING: ADMIN_API_TOKEN is not configured; editorial admin write actions will be unavailable.")
           assert collector.get("officialSources") == 4, health
           assert collector.get("newsFeeds") == 87, health
           assert collector.get("sportsFeeds") == 23, health
