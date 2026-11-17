@@ -1,6 +1,6 @@
 type Statement = { bind(...values: unknown[]): Statement; all<T=Record<string,unknown>>(): Promise<{results:T[]}>; run(): Promise<unknown>; };
 type Database = { prepare(sql:string): Statement };
-type Source = { id:string; name:string; url:string };
+type Source = { id:string; name:string; url:string; content_hash?:string|null };
 type Env = { DB: Database; GEMINI_API_KEY?: string };
 const MODEL = "gemini-2.5-flash";
 const schema = {
@@ -38,7 +38,7 @@ async function summarize(apiKey:string,source:Source,text:string) {
 export async function collectOfficialSources(env:Env) {
   if(!env.DB) throw new Error("D1 binding DB is unavailable");
   if(!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY secret is missing");
-  const rows=await env.DB.prepare("SELECT id,name,url FROM sources WHERE active=1 AND source_type='OFFICIAL' ORDER BY name").all<Source>();
+  const rows=await env.DB.prepare("SELECT s.id,s.name,s.url,st.content_hash FROM sources s LEFT JOIN collector_source_state st ON st.source_id=s.id WHERE s.active=1 AND s.source_type='OFFICIAL' ORDER BY s.name").all<Source>();
   const report={sources:rows.results.length,checked:0,queued:0,skipped:0,errors:[] as string[]};
   for(const source of rows.results) {
     try {
@@ -47,6 +47,8 @@ export async function collectOfficialSources(env:Env) {
       const html=(await response.text()).slice(0,350000);
       const text=cleanHtml(html);
       if(text.length<120) throw new Error("Source page did not contain enough readable text");
+      const contentHash=await fingerprint(text);
+      if(source.content_hash===contentHash){await env.DB.prepare("UPDATE collector_source_state SET last_checked_at=CURRENT_TIMESTAMP,last_error=NULL WHERE source_id=?").bind(source.id).run();await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;continue;}
       const items=await summarize(env.GEMINI_API_KEY,source,text);
       for(const item of items) {
         const fp=await fingerprint(source.url+"|"+item.title);
@@ -56,10 +58,13 @@ export async function collectOfficialSources(env:Env) {
           .bind(id,fp,source.id,item.title.trim().slice(0,240),item.summary.trim().slice(0,1200),item.category,source.url,date).run() as {meta?:{changes?:number}};
         if(result.meta?.changes) report.queued++; else report.skipped++;
       }
+      await env.DB.prepare("INSERT INTO collector_source_state(source_id,content_hash,last_checked_at,last_error) VALUES(?,?,CURRENT_TIMESTAMP,NULL) ON CONFLICT(source_id) DO UPDATE SET content_hash=excluded.content_hash,last_checked_at=CURRENT_TIMESTAMP,last_error=NULL").bind(source.id,contentHash).run();
       await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();
       report.checked++;
     } catch(error) {
-      report.errors.push(`${source.name}: ${error instanceof Error?error.message:"unknown error"}`);
+      const message=error instanceof Error?error.message:"unknown error";
+      report.errors.push(`${source.name}: ${message}`);
+      await env.DB.prepare("INSERT INTO collector_source_state(source_id,content_hash,last_checked_at,last_error) VALUES(?,'',CURRENT_TIMESTAMP,?) ON CONFLICT(source_id) DO UPDATE SET last_checked_at=CURRENT_TIMESTAMP,last_error=excluded.last_error").bind(source.id,message).run().catch(()=>undefined);
     }
   }
   return report;
