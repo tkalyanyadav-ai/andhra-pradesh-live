@@ -1,0 +1,18 @@
+PRAGMA foreign_keys=ON;
+CREATE TABLE districts(id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE,name_te TEXT,slug TEXT NOT NULL UNIQUE,official_url TEXT,active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE departments(id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE,name_te TEXT,slug TEXT NOT NULL UNIQUE,official_url TEXT);
+CREATE TABLE sources(id TEXT PRIMARY KEY,name TEXT NOT NULL,url TEXT NOT NULL UNIQUE,source_type TEXT NOT NULL CHECK(source_type IN('OFFICIAL','NEWS')),active INTEGER NOT NULL DEFAULT 1,last_checked_at TEXT);
+CREATE TABLE articles(id TEXT PRIMARY KEY,slug TEXT NOT NULL UNIQUE,title TEXT NOT NULL,title_te TEXT,summary TEXT NOT NULL,summary_te TEXT,body TEXT,category TEXT NOT NULL,district_id TEXT REFERENCES districts(id),source_id TEXT REFERENCES sources(id),source_url TEXT NOT NULL,published_at TEXT NOT NULL,checked_at TEXT,verification_status TEXT NOT NULL DEFAULT 'AWAITING_OFFICIAL_CONFIRMATION' CHECK(verification_status IN('CONFIRMED','DEVELOPING','AWAITING_OFFICIAL_CONFIRMATION')),is_demo INTEGER NOT NULL DEFAULT 0,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE government_orders(id TEXT PRIMARY KEY,go_number TEXT NOT NULL,category TEXT NOT NULL,department_id TEXT REFERENCES departments(id),subject TEXT NOT NULL,summary TEXT,issue_date TEXT NOT NULL,pdf_url TEXT,source_url TEXT NOT NULL,extracted_text TEXT,verified INTEGER NOT NULL DEFAULT 0,is_demo INTEGER NOT NULL DEFAULT 0,UNIQUE(go_number,issue_date));
+CREATE TABLE officers(id TEXT PRIMARY KEY,full_name TEXT NOT NULL,service TEXT NOT NULL CHECK(service IN('IAS','IPS')),batch TEXT);
+CREATE TABLE officer_postings(id TEXT PRIMARY KEY,officer_id TEXT NOT NULL REFERENCES officers(id),designation TEXT NOT NULL,department_id TEXT REFERENCES departments(id),district_id TEXT REFERENCES districts(id),order_number TEXT,order_date TEXT,effective_from TEXT NOT NULL,effective_to TEXT,official_order_url TEXT,verified INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE amaravati_projects(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT,status TEXT NOT NULL,source_url TEXT NOT NULL,updated_at TEXT DEFAULT CURRENT_TIMESTAMP,verified INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE schemes(id TEXT PRIMARY KEY,name TEXT NOT NULL,name_te TEXT,description TEXT NOT NULL,eligibility TEXT,apply_url TEXT,source_url TEXT NOT NULL,updated_at TEXT DEFAULT CURRENT_TIMESTAMP,verified INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE recruitment_notices(id TEXT PRIMARY KEY,title TEXT NOT NULL,organization TEXT NOT NULL,deadline TEXT,notification_url TEXT NOT NULL,apply_url TEXT,source_url TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE subscriptions(id TEXT PRIMARY KEY,email TEXT NOT NULL,district TEXT,category TEXT,confirmed INTEGER NOT NULL DEFAULT 0,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE audit_log(id TEXT PRIMARY KEY,actor TEXT NOT NULL,action TEXT NOT NULL,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX articles_date ON articles(published_at DESC);
+CREATE INDEX articles_district ON articles(district_id,published_at DESC);
+CREATE INDEX orders_date ON government_orders(issue_date DESC);
+CREATE INDEX postings_officer ON officer_postings(officer_id,effective_from DESC);
+CREATE INDEX officers_service ON officers(service,full_name);
