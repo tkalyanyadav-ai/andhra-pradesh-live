@@ -84,10 +84,10 @@ jobs:
           assert collector.get("configured") is True, health
           assert collector.get("geminiConfigured") is True, "GEMINI_API_KEY is not available to the Worker"
           assert collector.get("officialSources") == 4, health
-          assert collector.get("newsFeeds") == 82, health
-  assert collector.get("sportsFeeds") == 19, health
-  assert collector.get("entertainmentFeeds") == 22, health
-          print("Smoke test passed: homepage, D1, Gemini secret, four official sources, 82 total news feeds, 19 sports feeds and 22 entertainment feeds.")
+          assert collector.get("newsFeeds") == 87, health
+  assert collector.get("sportsFeeds") == 23, health
+  assert collector.get("entertainmentFeeds") == 23, health
+          print("Smoke test passed: homepage, D1, Gemini secret, four official sources, 87 total news feeds, 23 sports feeds and 23 entertainment feeds.")
           PY
           curl --fail --silent --show-error "$WORKER_URL/api/content/districts?limit=30" -o /tmp/districts.json
           python3 - <<'PY'
