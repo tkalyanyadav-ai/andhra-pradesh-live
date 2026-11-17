@@ -11,6 +11,23 @@ const schema = {type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJEC
 function cleanHtml(html:string) {
  return html.replace(/<(script|style|noscript|svg)[^>]*>[\s\S]*?<\/\1>/gi," ").replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6])\b[^>]*>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/[\t\r ]+/g," ").replace(/\n\s*/g,"\n").trim().slice(0,18000);
 }
+function parseDate(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
+function classifyNews(value:string){
+ const s=value.toLowerCase();
+ if(/amaravati|apcrda|capital city/.test(s))return "Amaravati";
+ if(/ias|ips|collector|superintendent of police|transferred|posting/.test(s))return "IAS/IPS";
+ if(/appsc|recruitment|notification|vacanc|job|exam|hall ticket|result/.test(s))return "Recruitment";
+ if(/government order|\\bgo\\s*(no|ms|rt)|cabinet|secretariat|department order/.test(s))return "Government Order";
+ if(/scheme|pension|welfare|benefit|subsidy/.test(s))return "Scheme";
+ if(/police|crime|murder|arrest|theft|accident|fire|missing|court|high court/.test(s))return "Crime & Safety";
+ if(/rain|cyclone|weather|flood|heatwave|imd/.test(s))return "Weather";
+ if(/farmer|agriculture|crop|irrigation|seed|fertili[sz]er/.test(s))return "Agriculture";
+ if(/school|college|university|education|student|teacher/.test(s))return "Education";
+ if(/industry|investment|company|business|factory| ಉದ್ಯಮ/.test(s))return "Business";
+ if(/election|minister|chief minister|assembly|politic|party/.test(s))return "Politics";
+ if(/district|mandal|village|municipal|panchayat/.test(s))return "District Update";
+ return "Other";
+}
 function decodeXml(s:string){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
 function rssEntries(xml:string){
  const blocks=[...xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,30);
@@ -40,12 +57,15 @@ export async function collectOfficialSources(env:Env) {
    const response=await fetch(source.url,{headers:{"User-Agent":"AndhraPradeshLiveBot/1.0 (+source-attributed public news aggregation)","Accept":source.source_type==="NEWS"?"application/rss+xml, application/atom+xml, application/xml, text/xml":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(18000)});
    if(!response.ok)throw new Error(`Source returned HTTP ${response.status}`);
    const body=(await response.text()).slice(0,350000);
-   let text="",allowedUrls=new Set<string>([source.url]);
+   let text="",allowedUrls=new Set<string>([source.url]),items:Candidate[]=[];
    if(source.source_type==="NEWS"){
     const entries=rssEntries(body);
     if(!entries.length)throw new Error("RSS/Atom feed contained no readable entries");
     for(const entry of entries)allowedUrls.add(entry.link);
     text=entries.map((e,i)=>`ITEM ${i+1}\nTITLE: ${e.title}\nPUBLISHED: ${e.date}\nARTICLE_URL: ${e.link}\nDESCRIPTION: ${e.description}`).join("\n\n").slice(0,18000);
+    // RSS headlines and descriptions are publisher-attributed source material. Queue them directly
+    // to avoid spending one Gemini request per feed; editorial review still controls publication.
+    items=entries.map(e=>({title:e.title,summary:e.description||e.title,category:classifyNews(e.title+" "+e.description),publishedAt:parseDate(e.date),sourceUrl:e.link,isRelevant:true}));
    }else{text=cleanHtml(body);}
    if(text.length<80)throw new Error("Source page did not contain enough readable text");
    const contentHash=await fingerprint(text);
@@ -53,7 +73,7 @@ export async function collectOfficialSources(env:Env) {
     await env.DB.prepare("UPDATE collector_source_state SET last_checked_at=CURRENT_TIMESTAMP,last_error=NULL WHERE source_id=?").bind(source.id).run();
     await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;continue;
    }
-   const items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);
+   if(source.source_type!=="NEWS")items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);
    for(const item of items){
     const articleUrl=allowedUrls.has(item.sourceUrl||"")?item.sourceUrl!:source.url;
     const fp=await fingerprint(articleUrl+"|"+item.title);
