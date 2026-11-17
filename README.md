@@ -4,7 +4,7 @@
 A source-first Andhra Pradesh public information portal. The app includes a multi-section Next.js site, searchable content APIs, Cloudflare D1 data model, protected editorial write API and Workers deployment configuration.
 
 ## Sections
-Amaravati projects; IAS and IPS posting history; districts; departments; Government Orders; news; schemes; recruitment; portal search; editorial admin console.
+Amaravati projects; IAS and IPS posting history; districts; departments; Government Orders; latest published updates on the homepage; news; sports; movies and entertainment; schemes; recruitment; portal search; editorial admin console.
 
 No fabricated news, Government Order numbers, officer transfers, district facts or project progress are seeded. Empty sections remain empty until source-linked records are entered and checked.
 
@@ -26,6 +26,9 @@ Next.js 15 App Router, React 19, TypeScript, OpenNext Cloudflare adapter, Cloudf
 4. Review the workflow result and verify `/api/health` after deployment.
 
 The Worker is named `andhra-pradesh-live`. The D1 binding is `DB`.
+
+## Homepage and news experience
+The homepage surfaces the latest approved articles with source links and verification labels. Sports and Movies & Entertainment sections filter published news by category on the server, so their pages are not limited to filtering only the first general-news results. Collected reports remain in the editorial queue until reviewed.
 
 ## API
 - GET /api/health — runtime and D1 status
