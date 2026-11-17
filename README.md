@@ -1,45 +1,48 @@
 # Andhra Pradesh Live
+**Every Update. Every District. Every Development. One Andhra Pradesh.**
 
-A Next.js + PostgreSQL starter for a source-first Andhra Pradesh information portal.
+A source-first Andhra Pradesh public information portal. The app includes a multi-section Next.js site, searchable content APIs, Cloudflare D1 data model, protected editorial write API and Workers deployment configuration.
 
-## Included
-- Responsive homepage and navigation for Amaravati, IAS/IPS postings, districts, GOs, schemes, recruitment and departments.
-- Prisma data model for articles, sources, districts, departments, officers, posting history, Government Orders, schemes, recruitment, projects, source checks, subscriptions and corrections.
-- PostgreSQL + Redis Docker Compose.
-- Health endpoint.
-- Source-monitoring and verification implementation contract.
-- No fabricated news, GO numbers, officers, project progress or live-data claims.
+## Sections
+Amaravati projects; IAS and IPS posting history; districts; departments; Government Orders; news; schemes; recruitment; portal search; editorial admin console.
 
-## Run locally
-1. Install Node.js 20+ and Docker.
-2. Copy `.env.example` to `.env` and set a strong database password.
-3. Start services: `docker compose up -d`
-4. Install packages: `npm install`
-5. Generate Prisma client: `npm run db:generate`
-6. Create database tables: `npm run db:migrate`
-7. Start development server: `npm run dev`
-8. Open `http://localhost:3000`; health endpoint is `/api/health`.
+No fabricated news, Government Order numbers, officer transfers, district facts or project progress are seeded. Empty sections remain empty until source-linked records are entered and checked.
 
-## Important production work still required
-This is a working foundation, not a deployed production service. Before public launch:
-- Configure real authentication and role-based authorization for all admin operations.
-- Build admin CRUD screens and audit trails.
-- Implement and test individual source connectors, with permission/rate-limit checks.
-- Implement editorial review and document storage with malware scanning.
-- Add search indexing, pagination, Telugu translation/review workflow and notification delivery.
-- Add monitoring, backups, secrets management, CI/CD, security testing and deployment.
-- Verify district/department master data against current official government records.
+## Stack
+Next.js 15 App Router, React 19, TypeScript, OpenNext Cloudflare adapter, Cloudflare Workers, D1 and Wrangler. Production records use D1. The earlier Prisma/PostgreSQL starter schema is no longer used by the Cloudflare app.
 
-## Verification model
-Only publish government decisions as `CONFIRMED` when supported by an authoritative official record.
-News reports without official confirmation remain `DEVELOPING` or `AWAITING_OFFICIAL_CONFIRMATION`.
-Preserve source publication date, retrieval/check time and the original source URL.
+## Local development
+1. Install Node.js 20+.
+2. Run `npm install`.
+3. Copy `.dev.vars.example` to `.dev.vars` and set a strong `ADMIN_API_TOKEN` for local editorial writes.
+4. Run `npm run dev` for Next.js development.
+5. Create the D1 database locally and apply schema: `npm run db:migrate:local`.
+6. Use `npm run preview` to test the Cloudflare Worker runtime locally.
 
-## Initial official source directory
-- https://www.ap.gov.in/
-- https://goir.ap.gov.in/
-- https://crda.ap.gov.in/
-- https://cdma.ap.gov.in/
-- https://www.india.gov.in/
+## Cloudflare deployment
+1. Create a D1 database named `andhra-pradesh-live-db`.
+2. Replace `REPLACE_WITH_D1_DATABASE_ID` in `wrangler.jsonc` with the D1 database ID.
+3. Apply schema using `npm run db:migrate:remote`.
+4. Add Worker secret `ADMIN_API_TOKEN` in Cloudflare. Never commit secrets.
+5. Run `npm run preview`, then `npm run deploy`.
 
-Do not assume a source supports RSS/API access or automated polling until checked.
+The Worker is named `andhra-pradesh-live`. The D1 binding is `DB`.
+
+## API
+- GET /api/health — runtime and D1 status
+- GET /api/search?q=... — articles, GOs, officers and districts
+- GET /api/content/news, /government-orders, /districts, /departments, /officers, /amaravati, /schemes, /recruitment
+- POST /api/subscribe — stores subscription request; confirmation/email delivery not enabled
+- POST /api/admin/{collection} — token-protected content creation
+
+Admin collections: news, government-orders, districts, departments, officers, amaravati, schemes, recruitment. Send `Authorization: Bearer <ADMIN_API_TOKEN>`. New news records default to `AWAITING_OFFICIAL_CONFIRMATION`; admin writes are audited.
+
+## GitHub Actions
+The deployment workflow uses `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. Configure both before enabling automated deployment from main. Cloudflare token should be scoped to Workers deployment and D1 access required by your workflow.
+
+## Source integrity
+Official source starting points: https://www.ap.gov.in/ ; https://goir.ap.gov.in/ ; https://crda.ap.gov.in/ ; https://www.india.gov.in/ .
+Do not assume RSS/API access or automated polling is permitted. Assess source terms, robots policy, access controls and rate limits before building connectors. Live source monitoring, email delivery, Telugu translation and automatic verification are not yet enabled.
+
+## Production hardening still required
+Add user-based authentication and role management, rate limiting, verified email subscriptions, backup/restore tests, abuse controls, monitoring and security review. Protect the admin API token and rotate it if exposed.
