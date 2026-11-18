@@ -107,7 +107,7 @@ export async function collectOfficialSources(env:Env) {
   try{
    let response:Response|undefined;
    let fetchError:unknown;
-   for(let attempt=0;attempt<3;attempt++){
+   for(let attempt=0;attempt<2;attempt++){
     try{
      const candidate=await fetch(source.url,{headers:{"User-Agent":"AndhraPradeshLiveBot/1.0 (+source-attributed public news aggregation)","Accept":source.source_type==="NEWS"?"application/rss+xml, application/atom+xml, application/xml, text/xml":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(18000)});
      if(candidate.ok){response=candidate;break;}
@@ -115,7 +115,7 @@ export async function collectOfficialSources(env:Env) {
      if(![408,425,429,500,502,503,504].includes(candidate.status)||attempt===1)throw fetchError;
     }catch(error){
      fetchError=error;
-     if(error instanceof Error && /HTTP (?!408|425|429|500|502|503|504)\\d{3}/.test(error.message))throw error;
+     if(error instanceof Error && /HTTP (?!408|425|429|500|502|503|504)\d{3}/.test(error.message))throw error;
      if(attempt===1)throw error;
     }
     await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
