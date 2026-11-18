@@ -25,5 +25,26 @@ jobs:
         run: npx tsc --noEmit
       - name: Validate production deployment workflow YAML
         run: ruby -e 'require "yaml"; YAML.parse_file(".github/workflows/deploy.yml")'
+      - name: Validate all D1 migrations and seeded source counts
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import sqlite3
+
+          db = sqlite3.connect(":memory:")
+          db.execute("PRAGMA foreign_keys=ON")
+          for migration in sorted(pathlib.Path("migrations").glob("*.sql")):
+              db.executescript(migration.read_text(encoding="utf-8"))
+
+          row = db.execute("""
+              SELECT COUNT(*),
+                     SUM(source_type='OFFICIAL'),
+                     SUM(source_type='NEWS' AND id NOT LIKE 'src-monitor-%'),
+                     SUM(id LIKE 'src-monitor-%')
+              FROM sources WHERE active=1
+          """).fetchone()
+          assert row == (100, 4, 95, 1), f"Unexpected active source counts: {row}"
+          print("All D1 migrations applied; verified 100 active sources (4 official, 95 RSS, 1 HTML monitor).")
+          PY
       - name: Cloudflare production build
         run: npx opennextjs-cloudflare build
