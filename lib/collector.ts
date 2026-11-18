@@ -42,6 +42,25 @@ function classifyNews(value:string){
  return "Other";
 }
 function decodeXml(s:string){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
+function extractPageLinks(html:string,baseUrl:string){
+ const base=new URL(baseUrl);
+ const links=new Map<string,string>();
+ for(const match of html.matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
+  const href=match[1].match(/\\bhref\\s*=\\s*([\"'])(.*?)\\1/i)?.[2];
+  if(!href)continue;
+  try{
+   const url=new URL(href.replace(/&amp;/g,\"&\"),base);
+   if(url.protocol!==\"https:\"&&url.protocol!==\"http:\")continue;
+   if(url.hostname!==base.hostname)continue;
+   url.hash=\"\";
+   if(url.href===base.href||links.has(url.href))continue;
+   const label=decodeXml(match[2]).slice(0,180);
+   links.set(url.href,label||url.pathname);
+   if(links.size>=100)break;
+  }catch{}
+ }
+ return [...links].map(([url,label])=>({url,label}));
+}
 function rssEntries(xml:string){
  const blocks=[...xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,30);
  return blocks.map((match)=>{
@@ -87,11 +106,18 @@ export async function collectOfficialSources(env:Env) {
     const entries=rssEntries(body);
     if(!entries.length)throw new Error("RSS/Atom feed contained no readable entries");
     for(const entry of entries)allowedUrls.add(entry.link);
-    text=entries.map((e,i)=>`ITEM ${i+1}\nTITLE: ${e.title}\nPUBLISHED: ${e.date}\nARTICLE_URL: ${e.link}\nDESCRIPTION: ${e.description}`).join("\n\n").slice(0,18000);
+    text=entries.map((e,i)=>"ITEM "+(i+1)+"\nTITLE: "+e.title+"\nPUBLISHED: "+e.date+"\nARTICLE_URL: "+e.link+"\nDESCRIPTION: "+e.description).join("\n\n").slice(0,18000);
     // RSS headlines and descriptions are publisher-attributed source material. Queue them directly
     // to avoid spending one Gemini request per feed; editorial review still controls publication.
     items=entries.map(e=>({title:e.title,summary:e.description||e.title,category:classifyFeedNews(source.id,e.title+" "+e.description),publishedAt:parseDate(e.date),sourceUrl:e.link,isRelevant:true}));
-   }else{text=cleanHtml(body);}
+   }else{
+    text=cleanHtml(body);
+    if(source.id.startsWith("src-monitor-")){
+     const pageLinks=extractPageLinks(body,source.url);
+     for(const link of pageLinks)allowedUrls.add(link.url);
+     text=(text+"\n\nPAGE LINKS (same-origin only):\n"+pageLinks.map(link=>link.label+": "+link.url).join("\n")).slice(0,18000);
+    }
+   }
    if(text.length<80)throw new Error("Source page did not contain enough readable text");
    const contentHash=await fingerprint(text);
    if(source.content_hash===contentHash){
