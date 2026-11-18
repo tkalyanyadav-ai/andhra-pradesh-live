@@ -31,6 +31,7 @@ function classifyNews(value:string){
  if(/ias|ips|collector|superintendent of police|transferred|posting/.test(s))return "IAS/IPS";
  if(/appsc|recruitment|notification|vacanc|job|exam|hall ticket|result/.test(s))return "Recruitment";
  if(/\bgovernment order|\bgo\s*(no|ms|rt)|cabinet|secretariat|department order/.test(s))return "Government Order";
+ if(/public notice|press release|official announcement|department circular|government circular|public advisory/.test(s))return "Public Notice";
  if(/scheme|pension|welfare|benefit|subsidy/.test(s))return "Scheme";
  if(/police|crime|murder|arrest|theft|accident|fire|missing|court|high court/.test(s))return "Crime & Safety";
  if(/rain|cyclone|weather|flood|heatwave|imd/.test(s))return "Weather";
