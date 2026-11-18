@@ -6,6 +6,6 @@
   "compatibility_flags":["nodejs_compat"],
   "assets":{"directory":".open-next/assets","binding":"ASSETS"},
   "d1_databases":[{"binding":"DB","database_name":"andhra-pradesh-live-db","database_id":"0ab3846f-6909-4b59-a5d2-9cb089afde9b","migrations_dir":"migrations"}],
-  "triggers":{"crons":["*/30 * * * *"]},
+  "triggers":{"crons":["*/10 * * * *"]},
   "observability":{"enabled":true}
 }
