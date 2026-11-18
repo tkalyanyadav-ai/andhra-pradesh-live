@@ -18,6 +18,7 @@ function classifyFeedNews(sourceId:string,value:string){
  const id=sourceId.toLowerCase();
  // Telugu publisher headlines may not contain English sport/cinema keywords.
  // Use the configured feed's topic as a reliable fallback for these dedicated feeds.
+ if(/^src-rss-publisher-.*-politics$/.test(id))return "Politics";
  if(/^src-rss-(sports|mykhel)-/.test(id)||/^src-rss-hindu-(sport|cricket|football|tennis|hockey|athletics|motorsport|other-sports)/.test(id)||/^src-rss-google-(ap-sports|ap-cricket|telugu-sports)/.test(id))return "Sports";
  if(/^src-rss-(entertainment|filmibeat)-/.test(id)||/^src-rss-hindu-(entertainment|movies|reviews|music)/.test(id)||/^src-rss-google-(tollywood|telugu-movies|telugu-ott|indian-cinema|music)/.test(id))return "Movies & Entertainment";
  return classifyNews(value);
@@ -41,6 +42,25 @@ function classifyNews(value:string){
  return "Other";
 }
 function decodeXml(s:string){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
+function extractPageLinks(html:string,baseUrl:string){
+ const base=new URL(baseUrl);
+ const links=new Map<string,string>();
+ for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+  const href=match[1].match(/\bhref\s*=\s*(["'])(.*?)\1/i)?.[2];
+  if(!href)continue;
+  try{
+   const url=new URL(href.replace(/&amp;/g,"&"),base);
+   if(url.protocol!=="https:"&&url.protocol!=="http:")continue;
+   if(url.hostname!==base.hostname)continue;
+   url.hash="";
+   if(url.href===base.href||links.has(url.href))continue;
+   const label=decodeXml(match[2]).slice(0,180);
+   links.set(url.href,label||url.pathname);
+   if(links.size>=100)break;
+  }catch{}
+ }
+ return [...links].map(([url,label])=>({url,label}));
+}
 function rssEntries(xml:string){
  const blocks=[...xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,30);
  return blocks.map((match)=>{
@@ -78,26 +98,46 @@ export async function collectOfficialSources(env:Env) {
  let nextSource=0;
  const processSource=async(source:Source)=>{
   try{
-   const response=await fetch(source.url,{headers:{"User-Agent":"AndhraPradeshLiveBot/1.0 (+source-attributed public news aggregation)","Accept":source.source_type==="NEWS"?"application/rss+xml, application/atom+xml, application/xml, text/xml":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(18000)});
-   if(!response.ok)throw new Error(`Source returned HTTP ${response.status}`);
+   let response:Response|undefined;
+   let fetchError:unknown;
+   for(let attempt=0;attempt<3;attempt++){
+    try{
+     const candidate=await fetch(source.url,{headers:{"User-Agent":"AndhraPradeshLiveBot/1.0 (+source-attributed public news aggregation)","Accept":source.source_type==="NEWS"?"application/rss+xml, application/atom+xml, application/xml, text/xml":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(18000)});
+     if(candidate.ok){response=candidate;break;}
+     fetchError=new Error(`Source returned HTTP ${candidate.status}`);
+     if(![408,425,429,500,502,503,504].includes(candidate.status)||attempt===2)throw fetchError;
+    }catch(error){
+     fetchError=error;
+     if(attempt===2)throw error;
+    }
+    await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
+   }
+   if(!response)throw fetchError instanceof Error?fetchError:new Error("Source request failed after retries");
    const body=(await response.text()).slice(0,350000);
    let text="",allowedUrls=new Set<string>([source.url]),items:Candidate[]=[];
-   if(source.source_type==="NEWS"){
+   if(source.source_type==="NEWS"&&!source.id.startsWith("src-monitor-")){
     const entries=rssEntries(body);
     if(!entries.length)throw new Error("RSS/Atom feed contained no readable entries");
     for(const entry of entries)allowedUrls.add(entry.link);
-    text=entries.map((e,i)=>`ITEM ${i+1}\nTITLE: ${e.title}\nPUBLISHED: ${e.date}\nARTICLE_URL: ${e.link}\nDESCRIPTION: ${e.description}`).join("\n\n").slice(0,18000);
+    text=entries.map((e,i)=>"ITEM "+(i+1)+"\nTITLE: "+e.title+"\nPUBLISHED: "+e.date+"\nARTICLE_URL: "+e.link+"\nDESCRIPTION: "+e.description).join("\n\n").slice(0,18000);
     // RSS headlines and descriptions are publisher-attributed source material. Queue them directly
     // to avoid spending one Gemini request per feed; editorial review still controls publication.
     items=entries.map(e=>({title:e.title,summary:e.description||e.title,category:classifyFeedNews(source.id,e.title+" "+e.description),publishedAt:parseDate(e.date),sourceUrl:e.link,isRelevant:true}));
-   }else{text=cleanHtml(body);}
+   }else{
+    text=cleanHtml(body);
+    if(source.id.startsWith("src-monitor-")){
+     const pageLinks=extractPageLinks(body,source.url);
+     for(const link of pageLinks)allowedUrls.add(link.url);
+     text=(text+"\n\nPAGE LINKS (same-origin only):\n"+pageLinks.map(link=>link.label+": "+link.url).join("\n")).slice(0,18000);
+    }
+   }
    if(text.length<80)throw new Error("Source page did not contain enough readable text");
    const contentHash=await fingerprint(text);
    if(source.content_hash===contentHash){
     await env.DB.prepare("UPDATE collector_source_state SET last_checked_at=CURRENT_TIMESTAMP,last_error=NULL WHERE source_id=?").bind(source.id).run();
     await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;return;
    }
-   if(source.source_type!=="NEWS"){if(!env.GEMINI_API_KEY)throw new Error("GEMINI_API_KEY secret is missing; RSS collection can continue independently");items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);}
+   if(source.source_type!=="NEWS"||source.id.startsWith("src-monitor-")){if(!env.GEMINI_API_KEY)throw new Error("GEMINI_API_KEY secret is missing; RSS collection can continue independently");items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);}
    for(const item of items){
     const articleUrl=allowedUrls.has(item.sourceUrl||"")?item.sourceUrl!:source.url;
     const fp=await fingerprint(articleUrl+"|"+item.title);
@@ -113,7 +153,7 @@ export async function collectOfficialSources(env:Env) {
   }
  };
  // Bound concurrent network requests so the larger feed set can finish inside the Cron window.
- await Promise.all(Array.from({length:8},async()=>{
+ await Promise.all(Array.from({length:4},async()=>{
   while(true){const index=nextSource++;if(index>=rows.results.length)return;await processSource(rows.results[index]);}
  }));
  return report;
