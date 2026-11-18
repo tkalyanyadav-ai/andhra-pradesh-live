@@ -94,8 +94,15 @@ async function summarize(apiKey:string,source:Source,text:string,allowedUrls:Set
 export async function collectOfficialSources(env:Env) {
  if(!env.DB)throw new Error("D1 binding DB is unavailable");
  const rows=await env.DB.prepare("SELECT s.id,s.name,s.url,s.source_type,st.content_hash FROM sources s LEFT JOIN collector_source_state st ON st.source_id=s.id WHERE s.active=1 ORDER BY CASE s.source_type WHEN 'OFFICIAL' THEN 0 ELSE 1 END,s.name").all<Source>();
- const report={sources:rows.results.length,checked:0,queued:0,skipped:0,errors:[] as string[]};
- let nextSource=0;
+ const report={sources:rows.results.length,batchSize:0,nextOffset:0,checked:0,queued:0,skipped:0,errors:[] as string[]};
+ if(rows.results.length===0)return report;
+ const state=await env.DB.prepare("SELECT next_offset FROM collector_run_state WHERE id='main'").first<{next_offset:number}>();
+ const offset=Math.max(0,Number(state?.next_offset??0))%rows.results.length;
+ const batchSize=Math.min(16,rows.results.length);
+ const batch=Array.from({length:batchSize},(_,i)=>rows.results[(offset+i)%rows.results.length]);
+ const nextOffset=(offset+batchSize)%rows.results.length;
+ report.batchSize=batch.length;
+ report.nextOffset=nextOffset;
  const processSource=async(source:Source)=>{
   try{
    let response:Response|undefined;
@@ -105,10 +112,11 @@ export async function collectOfficialSources(env:Env) {
      const candidate=await fetch(source.url,{headers:{"User-Agent":"AndhraPradeshLiveBot/1.0 (+source-attributed public news aggregation)","Accept":source.source_type==="NEWS"?"application/rss+xml, application/atom+xml, application/xml, text/xml":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(18000)});
      if(candidate.ok){response=candidate;break;}
      fetchError=new Error(`Source returned HTTP ${candidate.status}`);
-     if(![408,425,429,500,502,503,504].includes(candidate.status)||attempt===2)throw fetchError;
+     if(![408,425,429,500,502,503,504].includes(candidate.status)||attempt===1)throw fetchError;
     }catch(error){
      fetchError=error;
-     if(attempt===2)throw error;
+     if(error instanceof Error && /HTTP (?!408|425|429|500|502|503|504)\\d{3}/.test(error.message))throw error;
+     if(attempt===1)throw error;
     }
     await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
    }
@@ -153,8 +161,9 @@ export async function collectOfficialSources(env:Env) {
   }
  };
  // Bound concurrent network requests so the larger feed set can finish inside the Cron window.
- await Promise.all(Array.from({length:4},async()=>{
-  while(true){const index=nextSource++;if(index>=rows.results.length)return;await processSource(rows.results[index]);}
+ await Promise.all(Array.from({length:4},async(_,workerIndex)=>{
+  for(let index=workerIndex;index<batch.length;index+=4)await processSource(batch[index]);
  }));
+ await env.DB.prepare("UPDATE collector_run_state SET next_offset=?,updated_at=CURRENT_TIMESTAMP WHERE id='main'").bind(nextOffset).run();
  return report;
 }
