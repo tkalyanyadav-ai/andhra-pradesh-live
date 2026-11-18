@@ -45,14 +45,14 @@ function decodeXml(s:string){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1"
 function extractPageLinks(html:string,baseUrl:string){
  const base=new URL(baseUrl);
  const links=new Map<string,string>();
- for(const match of html.matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
-  const href=match[1].match(/\\bhref\\s*=\\s*([\"'])(.*?)\\1/i)?.[2];
+ for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+  const href=match[1].match(/\bhref\s*=\s*(["'])(.*?)\1/i)?.[2];
   if(!href)continue;
   try{
-   const url=new URL(href.replace(/&amp;/g,\"&\"),base);
-   if(url.protocol!==\"https:\"&&url.protocol!==\"http:\")continue;
+   const url=new URL(href.replace(/&amp;/g,"&"),base);
+   if(url.protocol!=="https:"&&url.protocol!=="http:")continue;
    if(url.hostname!==base.hostname)continue;
-   url.hash=\"\";
+   url.hash="";
    if(url.href===base.href||links.has(url.href))continue;
    const label=decodeXml(match[2]).slice(0,180);
    links.set(url.href,label||url.pathname);
