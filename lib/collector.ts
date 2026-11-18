@@ -18,6 +18,7 @@ function classifyFeedNews(sourceId:string,value:string){
  const id=sourceId.toLowerCase();
  // Telugu publisher headlines may not contain English sport/cinema keywords.
  // Use the configured feed's topic as a reliable fallback for these dedicated feeds.
+ if(/^src-rss-publisher-.*-politics$/.test(id))return "Politics";
  if(/^src-rss-(sports|mykhel)-/.test(id)||/^src-rss-hindu-(sport|cricket|football|tennis|hockey|athletics|motorsport|other-sports)/.test(id)||/^src-rss-google-(ap-sports|ap-cricket|telugu-sports)/.test(id))return "Sports";
  if(/^src-rss-(entertainment|filmibeat)-/.test(id)||/^src-rss-hindu-(entertainment|movies|reviews|music)/.test(id)||/^src-rss-google-(tollywood|telugu-movies|telugu-ott|indian-cinema|music)/.test(id))return "Movies & Entertainment";
  return classifyNews(value);
@@ -82,7 +83,7 @@ export async function collectOfficialSources(env:Env) {
    if(!response.ok)throw new Error(`Source returned HTTP ${response.status}`);
    const body=(await response.text()).slice(0,350000);
    let text="",allowedUrls=new Set<string>([source.url]),items:Candidate[]=[];
-   if(source.source_type==="NEWS"){
+   if(source.source_type==="NEWS"&&!source.id.startsWith("src-monitor-")){
     const entries=rssEntries(body);
     if(!entries.length)throw new Error("RSS/Atom feed contained no readable entries");
     for(const entry of entries)allowedUrls.add(entry.link);
@@ -97,7 +98,7 @@ export async function collectOfficialSources(env:Env) {
     await env.DB.prepare("UPDATE collector_source_state SET last_checked_at=CURRENT_TIMESTAMP,last_error=NULL WHERE source_id=?").bind(source.id).run();
     await env.DB.prepare("UPDATE sources SET last_checked_at=CURRENT_TIMESTAMP WHERE id=?").bind(source.id).run();report.checked++;report.skipped++;return;
    }
-   if(source.source_type!=="NEWS"){if(!env.GEMINI_API_KEY)throw new Error("GEMINI_API_KEY secret is missing; RSS collection can continue independently");items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);}
+   if(source.source_type!=="NEWS"||source.id.startsWith("src-monitor-")){if(!env.GEMINI_API_KEY)throw new Error("GEMINI_API_KEY secret is missing; RSS collection can continue independently");items=await summarize(env.GEMINI_API_KEY,source,text,allowedUrls);}
    for(const item of items){
     const articleUrl=allowedUrls.has(item.sourceUrl||"")?item.sourceUrl!:source.url;
     const fp=await fingerprint(articleUrl+"|"+item.title);
