@@ -87,10 +87,10 @@ jobs:
           if collector.get("adminConfigured") is not True:
               print("WARNING: ADMIN_API_TOKEN is not configured; editorial admin write actions will be unavailable.")
           assert collector.get("officialSources") == 4, health
-          assert collector.get("newsFeeds") == 87, health
+          assert collector.get("newsFeeds") == 95, health
           assert collector.get("sportsFeeds") == 23, health
           assert collector.get("entertainmentFeeds") == 23, health
-          print("Smoke test passed: homepage, D1, Gemini secret, four official sources, 87 total news feeds, 23 sports feeds and 23 entertainment feeds.")
+          print("Smoke test passed: homepage, D1, Gemini secret, four official sources, 95 total RSS news feeds, 23 sports feeds and 23 entertainment feeds.")
           PY
           curl --fail --silent --show-error "$WORKER_URL/api/content/districts?limit=30" -o /tmp/districts.json
           python3 - <<'PY'
