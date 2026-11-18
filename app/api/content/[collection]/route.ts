@@ -10,4 +10,42 @@ const sql:Record<string,string>={
  schemes:"SELECT id,name,name_te,description,eligibility,apply_url,source_url,updated_at,verified FROM schemes ORDER BY updated_at DESC LIMIT ?",
  recruitment:"SELECT id,title,organization,deadline,notification_url,apply_url,source_url,created_at FROM recruitment_notices ORDER BY created_at DESC LIMIT ?"
 };
-export async function GET(req:Request,{params}:{params:Promise<{collection:string}>}){const {collection}=await params;if(!sql[collection])return Response.json({error:"Unknown collection"},{status:404});const searchParams=new URL(req.url).searchParams;const limit=Math.min(Math.max(Number(searchParams.get("limit")||30),1),100);const category=searchParams.get("category")??"";const db=await getDatabase();if(!db)return Response.json({items:[],configured:false,message:"D1 database is not connected."});try{const filteredNews=collection==="news"&&["Sports","Movies & Entertainment"].includes(category);const query=filteredNews?sql.news.replace("WHERE a.is_demo=0","WHERE a.is_demo=0 AND a.category=?"):sql[collection];const statement=db.prepare(query);const r=filteredNews?await statement.bind(category,limit).all():await statement.bind(limit).all();return Response.json({items:r.results,configured:true})}catch{return Response.json({items:[],configured:false,message:"Apply the D1 migrations before publishing records."},{status:503})}}
+const updateCategory:Record<string,string>={
+ "government-orders":"Government Order",
+ districts:"District Update",
+ departments:"Public Notice",
+ amaravati:"Amaravati",
+ schemes:"Scheme",
+ recruitment:"Recruitment"
+};
+export async function GET(req:Request,{params}:{params:Promise<{collection:string}>}){
+ const {collection}=await params;
+ if(!sql[collection])return Response.json({error:"Unknown collection"},{status:404});
+ const searchParams=new URL(req.url).searchParams;
+ const limit=Math.min(Math.max(Number(searchParams.get("limit")||30),1),100);
+ const category=searchParams.get("category")??"";
+ const topic=searchParams.get("topic")??"";
+ const db=await getDatabase();
+ if(!db)return Response.json({items:[],configured:false,message:"D1 database is not connected."});
+ try{
+  const filteredNews=collection==="news"&&["Sports","Movies & Entertainment"].includes(category);
+  const query=filteredNews?sql.news.replace("WHERE a.is_demo=0","WHERE a.is_demo=0 AND a.category=?"):sql[collection];
+  const statement=db.prepare(query);
+  const r=filteredNews?await statement.bind(category,limit).all():await statement.bind(limit).all();
+  const items=[...r.results] as Record<string,unknown>[];
+  // Collector approvals are stored in articles. Surface those reviewed updates on
+  // their matching subject pages as well as in the general news feed.
+  let feedCategory=updateCategory[collection]??"";
+  if(collection==="officers"&&["IAS","IPS"].includes(topic))feedCategory="IAS/IPS";
+  if(feedCategory){
+   const updates=await db.prepare(
+    "SELECT a.id,a.title,a.title_te,a.summary,a.summary_te,a.category,a.source_url,a.published_at,a.verification_status,a.district_id,d.name AS district,s.name AS source_name FROM articles a LEFT JOIN districts d ON d.id=a.district_id LEFT JOIN sources s ON s.id=a.source_id WHERE a.is_demo=0 AND a.category=? ORDER BY a.published_at DESC LIMIT ?"
+   ).bind(feedCategory,limit).all<Record<string,unknown>>();
+   const existing=new Set(items.map(item=>String(item.id)));
+   for(const item of updates.results)if(!existing.has(String(item.id)))items.push({...item,record_type:"news_update"});
+  }
+  return Response.json({items,configured:true});
+ }catch{
+  return Response.json({items:[],configured:false,message:"Apply the D1 migrations before publishing records."},{status:503});
+ }
+}
