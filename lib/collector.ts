@@ -1,4 +1,4 @@
-type Statement = { bind(...values: unknown[]): Statement; all<T=Record<string,unknown>>(): Promise<{results:T[]}>; run(): Promise<unknown>; };
+type Statement = { bind(...values: unknown[]): Statement; all<T=Record<string,unknown>>(): Promise<{results:T[]}>; first<T=Record<string,unknown>>(): Promise<T|null>; run(): Promise<unknown>; };
 type Database = { prepare(sql:string): Statement };
 type Source = { id:string; name:string; url:string; source_type:string; content_hash?:string|null };
 type Env = { DB: Database; GEMINI_API_KEY?: string };
